@@ -1,0 +1,10 @@
+node_modules/
+.next/
+out/
+workers/dist/
+.env*.local
+.DS_Store
+*.log
+context/
+KaraoQ – Coding Agent Master Prompt.md
+

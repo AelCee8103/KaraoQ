@@ -1,0 +1,42 @@
+{
+  "name": "karaoq",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "cross-env DEPLOY_TARGET=vercel node scripts/prepare-target.mjs && next dev",
+    "build": "cross-env DEPLOY_TARGET=vercel node scripts/prepare-target.mjs && next build",
+    "build:vercel": "cross-env DEPLOY_TARGET=vercel node scripts/prepare-target.mjs && cross-env DEPLOY_TARGET=vercel next build",
+    "build:puter": "cross-env DEPLOY_TARGET=puter node scripts/prepare-target.mjs && cross-env DEPLOY_TARGET=puter next build && node scripts/post-build-puter.mjs",
+    "build:worker": "node workers/scripts/build.mjs",
+    "deploy:puter": "npm run build:worker && npm run build:puter",
+    "start": "next start",
+    "test": "node --test tests/rooms.test.ts tests/youtube.test.ts tests/validations.test.ts"
+  },
+  "dependencies": {
+    "@heyputer/puter.js": "^2.6.5",
+    "@supabase/supabase-js": "^2.49.1",
+    "@tanstack/react-query": "^5.67.2",
+    "clsx": "^2.1.1",
+    "cross-env": "^7.0.3",
+    "framer-motion": "^12.4.10",
+    "lucide-react": "^0.477.0",
+    "next": "^15.2.1",
+    "qrcode.react": "^4.2.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "tailwind-merge": "^3.0.2",
+    "zod": "^3.24.2",
+    "zustand": "^5.0.3"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.0.0",
+    "@types/node": "^22.13.10",
+    "@types/react": "^19.0.10",
+    "@types/react-dom": "^19.0.4",
+    "autoprefixer": "^10.4.21",
+    "esbuild": "^0.25.0",
+    "postcss": "^8.5.3",
+    "tailwindcss": "^4.0.0",
+    "typescript": "^5.8.2"
+  }
+}

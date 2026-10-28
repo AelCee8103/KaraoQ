@@ -1,0 +1,142 @@
+@import "tailwindcss";
+
+@theme {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-border: var(--border);
+  --color-primary: var(--primary);
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent-cyan: var(--accent-cyan);
+  --color-highlight-amber: var(--highlight-amber);
+  --color-success: var(--success);
+  --color-danger: var(--danger);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --font-display: var(--font-space-grotesk), sans-serif;
+  --font-body: var(--font-inter), sans-serif;
+}
+
+:root {
+  --background: #07050C;
+  --foreground: #F5F3FF;
+
+  --surface: #0F0B18;
+  --surface-raised: #171124;
+  --border: #2A2040;
+
+  --primary: #E91EC9;
+  --primary-soft: #FF5CE1;
+  --primary-foreground: #FFFFFF;
+
+  --accent: #7C3AED;
+  --accent-foreground: #FFFFFF;
+  --accent-cyan: #22D3EE;
+
+  --highlight-amber: #FBBF24;
+  --success: #34D399;
+  --danger: #FB7185;
+
+  --muted: #1E1730;
+  --muted-foreground: #A89FC4;
+
+  --radius: 0.75rem;
+}
+
+* {
+  border-color: var(--border);
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  overflow-x: hidden;
+  min-height: 100vh;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #07050C;
+}
+::-webkit-scrollbar-thumb {
+  background: #2A2040;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #7C3AED;
+}
+
+/* Glassmorphism utility */
+.glass-panel {
+  background: rgba(15, 11, 24, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(42, 32, 64, 0.8);
+}
+
+.glass-panel-glow {
+  background: rgba(23, 17, 36, 0.8);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(233, 30, 201, 0.25);
+  box-shadow: 0 0 25px -5px rgba(233, 30, 201, 0.2);
+}
+
+/* Ambient glow blobs */
+.ambient-glow-1 {
+  position: fixed;
+  top: -150px;
+  right: -100px;
+  width: 450px;
+  height: 450px;
+  background: radial-gradient(circle, rgba(233, 30, 201, 0.15) 0%, rgba(124, 58, 237, 0.05) 50%, transparent 70%);
+  filter: blur(60px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.ambient-glow-2 {
+  position: fixed;
+  bottom: -150px;
+  left: -100px;
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(124, 58, 237, 0.18) 0%, rgba(34, 211, 238, 0.05) 50%, transparent 70%);
+  filter: blur(70px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Equalizer animation for now playing */
+@keyframes eq-bar {
+  0%, 100% { height: 4px; }
+  50% { height: 18px; }
+}
+
+.animate-eq-1 {
+  animation: eq-bar 0.8s ease-in-out infinite;
+}
+.animate-eq-2 {
+  animation: eq-bar 1.1s ease-in-out 0.2s infinite;
+}
+.animate-eq-3 {
+  animation: eq-bar 0.9s ease-in-out 0.4s infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
