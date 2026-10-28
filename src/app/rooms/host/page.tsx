@@ -495,30 +495,20 @@ function HostConsoleContent() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main TV Player Screen (or Mini mode placeholder) */}
         <div className="lg:col-span-2 flex flex-col gap-4">
-          {!isSearchingInMini ? (
-            <div className="relative">
-              <YouTubePlayer
-                videoId={currentItem?.video_id || null}
-                autoPlay={true}
-                onStateChange={handlePlayerStateChange}
-                onEnded={handleSongEnded}
-                onProgress={(pos) => setCurrentPosition(pos)}
-              />
-            </div>
-          ) : (
-            <div className="w-full aspect-video rounded-2xl bg-surface-raised border border-border/80 flex flex-col items-center justify-center p-6 text-center gap-3">
-              <p className="text-sm font-semibold text-foreground">
-                Playing in docked Mini-Player mode...
-              </p>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsSearchingInMini(false)}
-              >
-                Expand Main Screen
-              </Button>
-            </div>
-          )}
+          <MiniPlayer
+            isOpen={isSearchingInMini}
+            onClose={() => setIsSearchingInMini(false)}
+            onExpand={() => setIsSearchingInMini(false)}
+            title={currentItem?.title}
+          >
+            <YouTubePlayer
+              videoId={currentItem?.video_id || null}
+              autoPlay={true}
+              onStateChange={handlePlayerStateChange}
+              onEnded={handleSongEnded}
+              onProgress={(pos) => setCurrentPosition(pos)}
+            />
+          </MiniPlayer>
 
           {/* Host Search while playing trigger */}
           <Card className="p-4 flex items-center justify-between gap-4">
@@ -546,7 +536,7 @@ function HostConsoleContent() {
               </h3>
               <SearchBar initialQuery={searchQuery} onSearch={handleHostSearch} autoFocus />
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-96 overflow-y-auto">
+              <div className="grid grid-cols-1 sm:grid-cols-2 auto-rows-max items-start gap-3 max-h-[70vh] overflow-y-auto pr-1">
                 {searchResults.map((video) => (
                   <VideoCard
                     key={video.id}
@@ -687,21 +677,6 @@ function HostConsoleContent() {
           </Card>
         </div>
       </div>
-
-      {/* Docked Mini Player (Visible when host searches) */}
-      <MiniPlayer
-        isOpen={isSearchingInMini}
-        onClose={() => setIsSearchingInMini(false)}
-        onExpand={() => setIsSearchingInMini(false)}
-        title={currentItem?.title}
-      >
-        <YouTubePlayer
-          videoId={currentItem?.video_id || null}
-          autoPlay={true}
-          onStateChange={handlePlayerStateChange}
-          onEnded={handleSongEnded}
-        />
-      </MiniPlayer>
 
       {/* QR Code Deep Link Modal */}
       <Modal
