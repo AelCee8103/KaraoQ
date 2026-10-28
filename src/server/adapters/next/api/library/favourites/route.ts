@@ -3,7 +3,7 @@ import { createNextServerContext, jsonResponse, errorResponse } from "@/server/a
 import { getUserFavourites, toggleFavourite } from "@/server/core/library";
 import { addFavouriteSchema } from "@/lib/validations";
 
-export const dynamic = "force-static";
+export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
   try {

@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { ServerContext } from "@/server/core/types";
 import { getSupabaseAdminClient } from "@/lib/supabase/server";
 import { verifyPuterToken } from "@/server/core/auth";
+import { CoreError } from "@/server/core/types";
 import { ZodError } from "zod";
 
 export async function createNextServerContext(req: NextRequest): Promise<ServerContext> {
@@ -9,7 +10,15 @@ export async function createNextServerContext(req: NextRequest): Promise<ServerC
   try {
     supabaseAdmin = getSupabaseAdminClient();
   } catch {
-    // If Supabase not yet configured, build mock client to keep Next.js routes operable
+    if (process.env.NODE_ENV === "production") {
+      throw new CoreError(
+        "Supabase server credentials are not configured",
+        "SERVER_CONFIGURATION_ERROR",
+        503
+      );
+    }
+
+    // Keep local preview routes operable before Supabase is configured.
     supabaseAdmin = {
       from: () => ({
         select: () => ({

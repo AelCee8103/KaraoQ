@@ -42,14 +42,14 @@ describe("YouTube Core & Quota Guard", () => {
     }
   });
 
-  it("tracks quota usage and triggers resting mode near 90%", () => {
-    recordQuotaUsage(100);
-    assert.strictEqual(isQuotaResting(), false);
+  it("tracks quota usage and triggers resting mode near 90%", async () => {
+    await recordQuotaUsage(100);
+    assert.strictEqual(await isQuotaResting(), false);
 
-    recordQuotaUsage(8950);
-    assert.strictEqual(isQuotaResting(), true);
+    await recordQuotaUsage(8950);
+    assert.strictEqual(await isQuotaResting(), true);
 
-    const stats = getQuotaStats();
+    const stats = await getQuotaStats();
     assert.strictEqual(stats.isResting, true);
     assert.ok(stats.unitsUsed >= 9000);
   });

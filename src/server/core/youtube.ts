@@ -166,7 +166,7 @@ export async function searchKaraokeVideos(
   }
 
   // Quota resting check
-  if (isQuotaResting()) {
+  if (await isQuotaResting()) {
     const filtered = FALLBACK_KARAOKE_SONGS.filter((s) =>
       s.title.toLowerCase().includes(normalizedQuery.toLowerCase())
     );
@@ -212,7 +212,7 @@ export async function searchKaraokeVideos(
     }
 
     const searchRes = await fetch(searchUrl.toString());
-    recordQuotaUsage(100);
+    await recordQuotaUsage(100);
 
     if (!searchRes.ok) {
       console.warn("YouTube search API response error:", searchRes.statusText);
@@ -234,7 +234,7 @@ export async function searchKaraokeVideos(
     videosUrl.searchParams.set("key", apiKey);
 
     const videosRes = await fetch(videosUrl.toString());
-    recordQuotaUsage(1);
+    await recordQuotaUsage(1);
 
     const videosData = videosRes.ok ? await videosRes.json() : { items: [] };
     const videoDetailsMap = new Map<string, { duration: string; embeddable: boolean; snippet?: any }>();

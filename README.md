@@ -157,7 +157,10 @@ npm test
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
    - `SUPABASE_SERVICE_ROLE_KEY`
    - `YOUTUBE_API_KEY`
+   - `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` (recommended for shared YouTube quota tracking across Vercel functions)
 4. Deploy! Vercel will execute `npm run build:vercel` and run both the static pages and `/api/*` route handlers seamlessly.
+
+The Supabase server variables are required for production API requests; without them, routes return a configuration error instead of pretending that database writes succeeded. If Upstash is not configured, quota tracking falls back to per-instance memory and is suitable only for local development or low-risk previews.
 
 ---
 

@@ -71,7 +71,10 @@ export default async function handler(req: Request): Promise<Response> {
   }
 
   const url = new URL(req.url);
-  const path = url.pathname.replace(/\/$/, "");
+  const rawPath = url.pathname.replace(/\/$/, "");
+  const path = rawPath === "/api" || rawPath.startsWith("/api/")
+    ? rawPath
+    : `/api${rawPath}`;
 
   const secrets = await getSecrets();
   const supabase = secrets.supabaseUrl && secrets.serviceRoleKey
