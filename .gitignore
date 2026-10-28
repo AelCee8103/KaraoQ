@@ -7,4 +7,4 @@ workers/dist/
 *.log
 context/
 KaraoQ – Coding Agent Master Prompt.md
-
+.env.local
