@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { ServerContext } from "@/server/core/types";
 import { getSupabaseAdminClient } from "@/lib/supabase/server";
 import { verifyPuterToken } from "@/server/core/auth";
+import { ZodError } from "zod";
 
 export async function createNextServerContext(req: NextRequest): Promise<ServerContext> {
   let supabaseAdmin;
@@ -74,7 +75,9 @@ export function jsonResponse<T>(data: T, status = 200) {
 export function errorResponse(err: unknown) {
   const message = (err as Error)?.message || "Internal server error";
   const code = (err as { code?: string })?.code || "INTERNAL_ERROR";
-  const statusCode = (err as { statusCode?: number })?.statusCode || 500;
+  const statusCode =
+    (err as { statusCode?: number })?.statusCode ||
+    (err instanceof ZodError ? 400 : 500);
 
   return Response.json(
     {

@@ -105,7 +105,7 @@ function HostConsoleContent() {
           id: roomId,
           host_id: user?.uuid || "host-id",
           name: initialName,
-          room_key: "KARAOQ",
+          room_key: "KARAQ7",
           status: "open",
           max_guests: 12,
           settings: { maxSongsPerGuest: 3, allowGuestReorder: true, blockExplicit: false },

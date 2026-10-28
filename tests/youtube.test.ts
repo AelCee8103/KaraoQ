@@ -1,6 +1,10 @@
 import { describe, it } from "node:test";
 import assert from "node:assert";
-import { parseIsoDuration, isChannelVerified } from "../src/server/core/youtube.ts";
+import {
+  FALLBACK_KARAOKE_SONGS,
+  parseIsoDuration,
+  isChannelVerified,
+} from "../src/server/core/youtube.ts";
 import { recordQuotaUsage, isQuotaResting, getQuotaStats } from "../src/server/core/quotaGuard.ts";
 
 describe("YouTube Core & Quota Guard", () => {
@@ -16,6 +20,26 @@ describe("YouTube Core & Quota Guard", () => {
     assert.strictEqual(isChannelVerified("KaraFun Official"), true);
     assert.strictEqual(isChannelVerified("Sing2Music Tracks"), true);
     assert.strictEqual(isChannelVerified("Random Guy Uploads"), false);
+  });
+
+  it("keeps curated fallback entries pointed at karaoke videos", () => {
+    const officialMusicVideoIds = new Set([
+      "fJ9rUzIMcZQ",
+      "L_LUpnjgPso",
+      "nfWlot6h_JM",
+      "hT_nvWreIhg",
+      "09R8_2nJtjg",
+      "kJQP7kiw5Fk",
+      "kffacxfA7G4",
+      "ZbZSe6N_BXs",
+    ]);
+
+    for (const song of FALLBACK_KARAOKE_SONGS) {
+      assert.strictEqual(song.isVerifiedKaraoke, true);
+      assert.match(song.title, /karaoke|instrumental|lyrics/i);
+      assert.strictEqual(officialMusicVideoIds.has(song.id), false);
+      assert.ok(song.thumbnailUrl.includes(`/vi/${song.id}/`));
+    }
   });
 
   it("tracks quota usage and triggers resting mode near 90%", () => {

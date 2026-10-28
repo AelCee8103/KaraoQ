@@ -70,6 +70,7 @@ function GuestViewContent() {
     activeReactions,
     singerAnnouncement,
     sendReaction,
+    requestPlaybackState,
   } = useRoomRealtime({
     roomId,
     userId: user?.uuid || profile?.id,
@@ -78,6 +79,12 @@ function GuestViewContent() {
     onQueueChanged: () => fetchQueue(),
     onMembersChanged: () => fetchRoomDetails(),
   });
+
+  useEffect(() => {
+    if (mode === "watchAlong" && isConnected) {
+      requestPlaybackState();
+    }
+  }, [mode, isConnected, requestPlaybackState]);
 
   const fetchRoomDetails = useCallback(async () => {
     if (!roomId) return;
@@ -101,7 +108,7 @@ function GuestViewContent() {
           id: roomId,
           host_id: "host-id",
           name: "Friday Karaoke Room",
-          room_key: "KARAOQ",
+          room_key: "KARAQ7",
           status: "open",
           max_guests: 12,
           settings: { maxSongsPerGuest: 3, allowGuestReorder: true, blockExplicit: false },
@@ -300,17 +307,29 @@ function GuestViewContent() {
       </div>
 
       {/* Watch Along Embedded Synchronized Player */}
-      {mode === "watchAlong" && playbackState?.videoId && (
+      {mode === "watchAlong" && (
         <Card className="p-3 overflow-hidden">
-          <YouTubePlayer
-            videoId={playbackState.videoId}
-            autoPlay={playbackState.status === "playing"}
-            syncTimestamp={playbackState.positionSeconds}
-            isWatchAlong={true}
-          />
-          <div className="mt-2 text-center text-xs text-muted-foreground">
-            Synchronized with Host Player (&lt;1.5s drift auto-correction)
-          </div>
+          {playbackState?.videoId ? (
+            <>
+              <YouTubePlayer
+                videoId={playbackState.videoId}
+                autoPlay={playbackState.status === "playing"}
+                syncTimestamp={playbackState.positionSeconds}
+                isWatchAlong={true}
+              />
+              <div className="mt-2 text-center text-xs text-muted-foreground">
+                Synchronized with Host Player (&lt;1.5s drift auto-correction)
+              </div>
+            </>
+          ) : (
+            <div className="aspect-video rounded-2xl bg-surface-raised border border-border flex items-center justify-center p-6 text-center">
+              <p className="text-sm text-muted-foreground">
+                {isConnected
+                  ? "Waiting for the host playback state..."
+                  : "Watch Along is unavailable while realtime is disconnected."}
+              </p>
+            </div>
+          )}
         </Card>
       )}
 

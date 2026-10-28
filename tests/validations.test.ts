@@ -24,6 +24,7 @@ describe("Zod Validations", () => {
 
     // Invalid length
     assert.throws(() => joinRoomSchema.parse({ roomKey: "ABC", nickname: "Singer" }));
+    assert.throws(() => joinRoomSchema.parse({ roomKey: "KARAOQ", nickname: "Singer" }));
   });
 
   it("validates queue item schema", () => {

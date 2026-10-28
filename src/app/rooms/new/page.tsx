@@ -53,9 +53,7 @@ export default function CreateRoomPage() {
       router.push(`/rooms/host?id=${res.room.id}`);
     } catch (err: any) {
       console.warn("Room creation error:", err);
-      // Fallback local room for development testing
-      const mockId = "room-" + Math.random().toString(36).substring(7);
-      router.push(`/rooms/host?id=${mockId}&name=${encodeURIComponent(name.trim())}`);
+      setError(err?.message || "Unable to create the room. Please try again.");
     } finally {
       setIsLoading(false);
     }

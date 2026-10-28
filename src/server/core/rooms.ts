@@ -23,6 +23,10 @@ export function generateRoomKey(): string {
   return key;
 }
 
+export function getRoomMemberRole(roomHostId: string, userId: string): "host" | "guest" {
+  return roomHostId === userId ? "host" : "guest";
+}
+
 export async function createRoom(
   ctx: ServerContext,
   input: { name: string; maxGuests?: number; settings?: RoomSettings }
@@ -144,7 +148,7 @@ export async function joinRoom(
     }
   }
 
-  const role = room.host_id === ctx.user.id ? "host" : "guest";
+  const role = getRoomMemberRole(room.host_id, ctx.user.id);
   const nickname = input.nickname.trim() || ctx.user.username;
 
   const { data: memberData, error: memberError } = await ctx.supabase

@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert";
-import { generateRoomKey } from "../src/server/core/rooms.ts";
+import { generateRoomKey, getRoomMemberRole } from "../src/server/core/rooms.ts";
 
 describe("Rooms Core", () => {
   it("generates 6-character room keys using CSPRNG charset", () => {
@@ -17,5 +17,10 @@ describe("Rooms Core", () => {
       keys.add(generateRoomKey());
     }
     assert.strictEqual(keys.size, 50);
+  });
+
+  it("assigns host role only to the room owner", () => {
+    assert.strictEqual(getRoomMemberRole("host-user", "host-user"), "host");
+    assert.strictEqual(getRoomMemberRole("host-user", "guest-user"), "guest");
   });
 });

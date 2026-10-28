@@ -93,11 +93,8 @@ export const puterClient: PuterAuthInterface = {
   async getToken() {
     const puter = await loadPuterSdk();
     if (!puter || !puter.auth?.isSignedIn?.()) return null;
-    try {
-      return puter.auth.token || "puter_session_token";
-    } catch {
-      return "puter_session_token";
-    }
+    const token = puter.authToken;
+    return typeof token === "string" && token.trim() ? token : null;
   },
 
   async kvGet<T = unknown>(key: string): Promise<T | null> {

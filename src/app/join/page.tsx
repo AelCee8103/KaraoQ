@@ -59,9 +59,8 @@ function JoinContent() {
 
       router.push(`/rooms/view?id=${res.room.id}&nick=${encodeURIComponent(nickname || user?.username || "Guest")}`);
     } catch (err: any) {
-      console.warn("Join failed, fallback for preview testing:", err);
-      // Fallback preview
-      router.push(`/rooms/view?id=room-${cleanKey}&nick=${encodeURIComponent(nickname || user?.username || "Guest")}`);
+      console.warn("Join failed:", err);
+      setError(err?.message || "Unable to join this room. Please try again.");
     } finally {
       setIsLoading(false);
     }

@@ -36,6 +36,11 @@ export function useRoomRealtime({
   const [isConnected, setIsConnected] = useState(false);
 
   const channelRef = useRef<RealtimeChannel | null>(null);
+  const playbackStateRef = useRef<PlaybackState | null>(null);
+
+  useEffect(() => {
+    playbackStateRef.current = playbackState;
+  }, [playbackState]);
 
   useEffect(() => {
     if (!roomId) return;
@@ -66,6 +71,15 @@ export function useRoomRealtime({
         }
       }
     );
+
+    channel.on("broadcast", { event: "playback_request" }, async () => {
+      if (!isHost || !playbackStateRef.current) return;
+      await channel.send({
+        type: "broadcast",
+        event: "playback_update",
+        payload: { state: playbackStateRef.current, sender: "host" } as BroadcastPlaybackPayload,
+      });
+    });
 
     // 2. Reaction Broadcast
     channel.on(
@@ -141,6 +155,7 @@ export function useRoomRealtime({
   // Host sends playback snapshot
   const broadcastPlayback = useCallback(
     async (state: PlaybackState) => {
+      playbackStateRef.current = state;
       setPlaybackState(state);
       if (channelRef.current && isConnected) {
         await channelRef.current.send({
@@ -152,6 +167,16 @@ export function useRoomRealtime({
     },
     [isConnected]
   );
+
+  const requestPlaybackState = useCallback(async () => {
+    if (channelRef.current && isConnected && !isHost) {
+      await channelRef.current.send({
+        type: "broadcast",
+        event: "playback_request",
+        payload: { requester: userId || "guest" },
+      });
+    }
+  }, [isConnected, isHost, userId]);
 
   // Send emoji reaction
   const sendReaction = useCallback(
@@ -207,6 +232,7 @@ export function useRoomRealtime({
     activeReactions,
     singerAnnouncement,
     broadcastPlayback,
+    requestPlaybackState,
     sendReaction,
     sendSingerAnnouncement,
   };
