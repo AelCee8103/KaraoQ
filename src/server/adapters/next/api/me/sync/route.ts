@@ -6,7 +6,6 @@ import { z } from "zod";
 const syncSchema = z.object({
   username: z.string().min(1),
   avatarUrl: z.string().nullable().optional(),
-  puterUserId: z.string().min(1),
 });
 
 export async function POST(req: NextRequest) {

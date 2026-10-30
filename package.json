@@ -6,14 +6,10 @@
     "dev": "cross-env DEPLOY_TARGET=vercel node scripts/prepare-target.mjs && next dev",
     "build": "cross-env DEPLOY_TARGET=vercel node scripts/prepare-target.mjs && next build",
     "build:vercel": "cross-env DEPLOY_TARGET=vercel node scripts/prepare-target.mjs && cross-env DEPLOY_TARGET=vercel next build",
-    "build:puter": "cross-env DEPLOY_TARGET=puter node scripts/prepare-target.mjs && cross-env DEPLOY_TARGET=puter next build && node scripts/post-build-puter.mjs",
-    "build:worker": "node workers/scripts/build.mjs",
-    "deploy:puter": "npm run build:worker && npm run build:puter",
     "start": "next start",
     "test": "node --test tests/rooms.test.ts tests/youtube.test.ts tests/validations.test.ts"
   },
   "dependencies": {
-    "@heyputer/puter.js": "^2.6.5",
     "@supabase/supabase-js": "^2.49.1",
     "@tanstack/react-query": "^5.67.2",
     "clsx": "^2.1.1",

@@ -241,20 +241,20 @@ export default function HomePage() {
         </Card>
       </section>
 
-      {/* Puter Call to Action Banner */}
+      {/* Account Call to Action Banner */}
       {!isAuthenticated && (
         <section className="w-full max-w-4xl glass-panel-glow rounded-3xl p-8 sm:p-10 text-center flex flex-col items-center gap-5">
           <Badge variant="primary" className="px-3 py-1">
             Zero Passwords Required
           </Badge>
           <h2 className="font-display font-extrabold text-2xl sm:text-3xl text-foreground">
-            Sign In with Puter Cloud OS
+            Create a free account
           </h2>
           <p className="text-sm sm:text-base text-muted-foreground max-w-lg">
-            Save your favourite karaoke songs, create playlists, and join rooms with your personalized Puter identity.
+            Save your favourite karaoke songs and playlists while keeping room hosting and singing available as a guest.
           </p>
-          <Button variant="primary" size="lg" onClick={signIn} className="mt-2">
-            Continue with Puter
+          <Button variant="primary" size="lg" onClick={() => signIn()} className="mt-2">
+            Continue as Guest
           </Button>
         </section>
       )}

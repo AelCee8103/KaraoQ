@@ -1,14 +1,14 @@
 import { Playlist, PlaylistItem, Favourite, PlayHistoryItem } from "../../lib/types/index.ts";
-import { ServerContext, CoreError } from "./types.ts";
+import { ServerContext, CoreError, requireRegisteredUser } from "./types.ts";
 
 // Playlists
 export async function getUserPlaylists(ctx: ServerContext): Promise<Playlist[]> {
-  if (!ctx.user) throw new CoreError("Unauthorized", "UNAUTHORIZED", 401);
+  requireRegisteredUser(ctx);
 
   const { data, error } = await ctx.supabase
     .from("playlists")
     .select("*, items:playlist_items(*)")
-    .eq("owner_id", ctx.user.id)
+    .eq("owner_id", requireRegisteredUser(ctx).id)
     .order("created_at", { ascending: false });
 
   if (error) throw new CoreError("Failed to fetch playlists", "DB_ERROR", 500);
@@ -19,12 +19,12 @@ export async function createPlaylist(
   ctx: ServerContext,
   input: { name: string; description?: string | null; isPublic?: boolean }
 ): Promise<Playlist> {
-  if (!ctx.user) throw new CoreError("Unauthorized", "UNAUTHORIZED", 401);
+  requireRegisteredUser(ctx);
 
   const { data, error } = await ctx.supabase
     .from("playlists")
     .insert({
-      owner_id: ctx.user.id,
+      owner_id: requireRegisteredUser(ctx).id,
       name: input.name.trim(),
       description: input.description || null,
       is_public: input.isPublic || false,
@@ -47,7 +47,7 @@ export async function addPlaylistItem(
     durationSeconds: number;
   }
 ): Promise<PlaylistItem> {
-  if (!ctx.user) throw new CoreError("Unauthorized", "UNAUTHORIZED", 401);
+  requireRegisteredUser(ctx);
 
   // Verify ownership
   const { data: pl } = await ctx.supabase
@@ -56,7 +56,7 @@ export async function addPlaylistItem(
     .eq("id", playlistId)
     .single();
 
-  if (!pl || pl.owner_id !== ctx.user.id) throw new CoreError("Forbidden", "FORBIDDEN", 403);
+  if (!pl || pl.owner_id !== requireRegisteredUser(ctx).id) throw new CoreError("Forbidden", "FORBIDDEN", 403);
 
   // Position
   const { data: lastItem } = await ctx.supabase
@@ -89,12 +89,12 @@ export async function addPlaylistItem(
 
 // Favourites
 export async function getUserFavourites(ctx: ServerContext): Promise<Favourite[]> {
-  if (!ctx.user) throw new CoreError("Unauthorized", "UNAUTHORIZED", 401);
+  requireRegisteredUser(ctx);
 
   const { data, error } = await ctx.supabase
     .from("favourites")
     .select("*")
-    .eq("user_id", ctx.user.id)
+    .eq("user_id", requireRegisteredUser(ctx).id)
     .order("created_at", { ascending: false });
 
   if (error) throw new CoreError("Failed to fetch favourites", "DB_ERROR", 500);
@@ -111,12 +111,12 @@ export async function toggleFavourite(
     durationSeconds: number;
   }
 ): Promise<{ isFavourited: boolean }> {
-  if (!ctx.user) throw new CoreError("Unauthorized", "UNAUTHORIZED", 401);
+  requireRegisteredUser(ctx);
 
   const { data: existing } = await ctx.supabase
     .from("favourites")
     .select("id")
-    .eq("user_id", ctx.user.id)
+    .eq("user_id", requireRegisteredUser(ctx).id)
     .eq("video_id", input.videoId)
     .maybeSingle();
 
@@ -125,7 +125,7 @@ export async function toggleFavourite(
     return { isFavourited: false };
   } else {
     await ctx.supabase.from("favourites").insert({
-      user_id: ctx.user.id,
+      user_id: requireRegisteredUser(ctx).id,
       video_id: input.videoId,
       title: input.title,
       channel_title: input.channelTitle || null,
@@ -138,12 +138,12 @@ export async function toggleFavourite(
 
 // History
 export async function getUserPlayHistory(ctx: ServerContext): Promise<PlayHistoryItem[]> {
-  if (!ctx.user) throw new CoreError("Unauthorized", "UNAUTHORIZED", 401);
+  requireRegisteredUser(ctx);
 
   const { data, error } = await ctx.supabase
     .from("play_history")
     .select("*")
-    .eq("user_id", ctx.user.id)
+    .eq("user_id", requireRegisteredUser(ctx).id)
     .order("played_at", { ascending: false })
     .limit(50);
 
@@ -153,8 +153,8 @@ export async function getUserPlayHistory(ctx: ServerContext): Promise<PlayHistor
 
 // Delete user data (Master brief Section 4.1)
 export async function deleteUserData(ctx: ServerContext): Promise<boolean> {
-  if (!ctx.user) throw new CoreError("Unauthorized", "UNAUTHORIZED", 401);
+  requireRegisteredUser(ctx);
 
-  await ctx.supabase.from("profiles").delete().eq("id", ctx.user.id);
+  await ctx.supabase.from("profiles").delete().eq("id", requireRegisteredUser(ctx).id);
   return true;
 }

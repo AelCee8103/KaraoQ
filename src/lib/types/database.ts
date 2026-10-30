@@ -20,7 +20,7 @@ export interface RoomSettings {
 
 export interface Profile {
   id: string;
-  puter_user_id: string;
+  auth_user_id: string;
   username: string;
   avatar_url: string | null;
   last_seen_at: string;

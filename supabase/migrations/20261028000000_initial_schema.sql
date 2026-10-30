@@ -6,7 +6,7 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 -- 1. Profiles Table
 CREATE TABLE IF NOT EXISTS public.profiles (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    puter_user_id TEXT UNIQUE NOT NULL,
+    auth_user_id UUID UNIQUE NOT NULL,
     username TEXT NOT NULL,
     avatar_url TEXT,
     last_seen_at TIMESTAMPTZ DEFAULT now(),

@@ -53,7 +53,7 @@ function PlaylistDetailContent() {
         // Mock fallback
         setPlaylist({
           id: playlistId,
-          owner_id: user?.uuid || "user-id",
+          owner_id: user?.id || "user-id",
           name: "My Karaoke Mix",
           description: "Top party hits",
           is_public: false,

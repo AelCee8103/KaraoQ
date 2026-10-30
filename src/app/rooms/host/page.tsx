@@ -85,8 +85,8 @@ function HostConsoleContent() {
     sendSingerAnnouncement,
   } = useRoomRealtime({
     roomId,
-    userId: user?.uuid || profile?.id,
-    nickname: user?.username || profile?.username || "Host",
+    userId: user?.id || profile?.id,
+    nickname: profile?.username || "Host",
     isHost: true,
     onQueueChanged: () => fetchQueue(),
     onMembersChanged: () => fetchRoomDetails(),
@@ -103,7 +103,7 @@ function HostConsoleContent() {
       if (!room) {
         setRoom({
           id: roomId,
-          host_id: user?.uuid || "host-id",
+          host_id: user?.id || "host-id",
           name: initialName,
           room_key: "KARAQ7",
           status: "open",
@@ -139,7 +139,7 @@ function HostConsoleContent() {
         const mockItem: QueueItem = {
           id: "queue-1",
           room_id: roomId,
-          added_by: user?.uuid || "host-id",
+          added_by: user?.id || "host-id",
           video_id: FALLBACK_KARAOKE_SONGS[0].id,
           title: FALLBACK_KARAOKE_SONGS[0].title,
           channel_title: FALLBACK_KARAOKE_SONGS[0].channelTitle,
@@ -359,7 +359,7 @@ function HostConsoleContent() {
       const mockItem: QueueItem = {
         id: "queue-" + Math.random().toString(36).substring(7),
         room_id: roomId,
-        added_by: user?.uuid || "host-id",
+        added_by: user?.id || "host-id",
         video_id: video.id,
         title: video.title,
         channel_title: video.channelTitle,

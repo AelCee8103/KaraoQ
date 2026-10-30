@@ -43,10 +43,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${inter.variable} ${spaceGrotesk.variable} dark`}>
-      <head>
-        {/* Puter.js v2 SDK */}
-        <script src="https://js.puter.com/v2/" async />
-      </head>
       <body className="font-body bg-background text-foreground antialiased selection:bg-primary selection:text-white">
         <AppProviders>
           <AppShell>{children}</AppShell>

@@ -15,11 +15,11 @@ export default function PrivacyPage() {
 
         <div className="space-y-4 text-sm text-muted-foreground leading-relaxed">
           <p>
-            KaraoQ prioritizes user privacy and minimal data retention. We utilize Puter Cloud OS for authentication and user-side storage.
+            KaraoQ prioritizes user privacy and minimal data retention. Guest sessions are temporary, while optional accounts use Supabase Auth.
           </p>
           <h2 className="text-base font-bold text-foreground font-display">1. Data We Process</h2>
           <p>
-            When you sign in with Puter, we receive your Puter username and avatar to display within rooms and saved playlists. We do not sell, rent, or track your personal information across third-party networks.
+            When you create an account, we receive your email and profile details needed to provide saved playlists and library features. We do not sell, rent, or track your personal information across third-party networks.
           </p>
           <h2 className="text-base font-bold text-foreground font-display">2. YouTube Services</h2>
           <p>

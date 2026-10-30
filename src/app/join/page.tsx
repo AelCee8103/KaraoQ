@@ -16,7 +16,7 @@ function JoinContent() {
   const router = useRouter();
   const keyParam = searchParams.get("key") || "";
 
-  const { isAuthenticated, signIn, user } = useAuth();
+  const { isAuthenticated, signIn, user, profile } = useAuth();
 
   const [roomKey, setRoomKey] = useState(keyParam.toUpperCase());
   const [nickname, setNickname] = useState("");
@@ -30,10 +30,10 @@ function JoinContent() {
   }, [keyParam]);
 
   useEffect(() => {
-    if (user?.username && !nickname) {
-      setNickname(user.username);
+    if (user && !nickname) {
+      setNickname(profile?.username || "Singer");
     }
-  }, [user, nickname]);
+  }, [user, profile, nickname]);
 
   const handleJoinSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,10 +54,10 @@ function JoinContent() {
     try {
       const res = await apiClient.post<{ room: Room; member: RoomMember }>("/rooms/join", {
         roomKey: cleanKey,
-        nickname: nickname.trim() || user?.username || "Guest",
+        nickname: nickname.trim() || profile?.username || "Guest",
       });
 
-      router.push(`/rooms/view?id=${res.room.id}&nick=${encodeURIComponent(nickname || user?.username || "Guest")}`);
+      router.push(`/rooms/view?id=${res.room.id}&nick=${encodeURIComponent(nickname || profile?.username || "Guest")}`);
     } catch (err: any) {
       console.warn("Join failed:", err);
       setError(err?.message || "Unable to join this room. Please try again.");
@@ -128,7 +128,7 @@ function JoinContent() {
 
           {!isAuthenticated && (
             <p className="text-[11px] text-muted-foreground text-center mt-2">
-              You will be prompted to sign in with your Puter profile to join.
+              You can join as a guest with a nickname; no account is required.
             </p>
           )}
         </form>

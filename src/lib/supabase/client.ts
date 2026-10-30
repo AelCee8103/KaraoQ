@@ -10,6 +10,7 @@ export function getSupabaseBrowserClient(): SupabaseClient | null {
     if (typeof window !== "undefined") {
       console.warn("Supabase public credentials not configured. Realtime will be simulated locally.");
     }
+
     return null;
   }
 
@@ -24,4 +25,12 @@ export function getSupabaseBrowserClient(): SupabaseClient | null {
   }
 
   return browserClient;
+}
+
+export function getSupabaseAuthClient(): SupabaseClient {
+  const client = getSupabaseBrowserClient();
+  if (!client) {
+    throw new Error("Supabase authentication is not configured");
+  }
+  return client;
 }

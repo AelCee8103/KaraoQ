@@ -24,7 +24,7 @@ import { Input } from "@/components/ui/Input";
 
 export default function LibraryPage() {
   const router = useRouter();
-  const { isAuthenticated, signIn, user } = useAuth();
+  const { isAuthenticated, isAnonymous, signIn, user } = useAuth();
 
   const [activeTab, setActiveTab] = useState<"favourites" | "playlists" | "history">("favourites");
   const [favourites, setFavourites] = useState<Favourite[]>([]);
@@ -38,7 +38,7 @@ export default function LibraryPage() {
   const [isCreatingPl, setIsCreatingPl] = useState(false);
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!isAuthenticated || isAnonymous) {
       setIsLoading(false);
       return;
     }
@@ -60,7 +60,7 @@ export default function LibraryPage() {
         setIsLoading(false);
       }
     })();
-  }, [isAuthenticated]);
+  }, [isAuthenticated, isAnonymous]);
 
   const handleCreatePlaylist = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -77,7 +77,7 @@ export default function LibraryPage() {
       // preview fallback
       const mock: Playlist = {
         id: "pl-" + Math.random().toString(36).substring(7),
-        owner_id: user?.uuid || "user-id",
+        owner_id: user?.id || "user-id",
         name: playlistName.trim(),
         description: null,
         is_public: false,
@@ -111,11 +111,11 @@ export default function LibraryPage() {
             Your Personal Library
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Sign in with Puter to save your favourite tracks, custom playlists, and singing history.
+            Create an account to save your favourite tracks, custom playlists, and singing history.
           </p>
         </div>
-        <Button variant="primary" size="lg" onClick={signIn}>
-          Sign In with Puter
+        <Button variant="primary" size="lg" onClick={() => signIn()}>
+          Continue as Guest
         </Button>
       </div>
     );

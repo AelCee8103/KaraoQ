@@ -7,7 +7,7 @@ import { useAuth } from "@/features/auth/AuthContext";
 import { Button } from "@/components/ui/Button";
 
 export function Navbar() {
-  const { user, profile, isAuthenticated, isLoading, signIn, signOut } = useAuth();
+  const { user, profile, isAuthenticated, isAnonymous, isLoading, signIn, signOut } = useAuth();
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
   return (
@@ -65,20 +65,19 @@ export function Navbar() {
                 onClick={() => setDropdownOpen(!dropdownOpen)}
                 className="flex items-center gap-2.5 p-1.5 pr-3 rounded-full bg-surface-raised border border-border hover:border-primary/50 transition-all"
               >
-                {user?.avatar ? (
-                  // eslint-disable-next-line @next/next/no-img-element
+                {user?.user_metadata?.avatar_url ? (
                   <img
-                    src={user.avatar}
-                    alt={user.username}
+                    src={user.user_metadata.avatar_url}
+                    alt={profile?.username || "Singer"}
                     className="w-7 h-7 rounded-full object-cover border border-primary/30"
                   />
                 ) : (
                   <div className="w-7 h-7 rounded-full bg-primary/20 text-primary-soft flex items-center justify-center font-bold text-xs">
-                    {user?.username?.charAt(0).toUpperCase()}
+                    {(profile?.username || "S").charAt(0).toUpperCase()}
                   </div>
                 )}
                 <span className="text-sm font-medium text-foreground max-w-[100px] truncate">
-                  {profile?.username || user?.username}
+                  {isAnonymous ? "Guest" : profile?.username}
                 </span>
               </button>
 
@@ -112,11 +111,11 @@ export function Navbar() {
             <Button
               variant="primary"
               size="sm"
-              onClick={signIn}
+              onClick={() => signIn()}
               className="flex items-center gap-2"
             >
               <LogIn className="w-4 h-4" />
-              <span>Continue with Puter</span>
+              <span>Continue as Guest</span>
             </Button>
           )}
         </div>

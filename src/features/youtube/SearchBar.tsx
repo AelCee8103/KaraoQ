@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { Search, X, Clock, Sparkles } from "lucide-react";
-import { puterClient } from "@/features/auth/puter";
 
 export interface SearchBarProps {
   initialQuery?: string;
@@ -27,22 +26,14 @@ export function SearchBar({
   }, [initialQuery]);
 
   useEffect(() => {
-    // Load recent searches from Puter KV or local storage
-    (async () => {
-      const stored = await puterClient.kvGet<string[]>("recent_searches");
-      if (stored && Array.isArray(stored)) {
-        setRecentSearches(stored);
-      } else {
-        const local = localStorage.getItem("karaoq_recent_searches");
-        if (local) {
-          try {
-            setRecentSearches(JSON.parse(local));
-          } catch {
-            // ignore
-          }
-        }
+    const local = localStorage.getItem("karaoq_recent_searches");
+    if (local) {
+      try {
+        setRecentSearches(JSON.parse(local));
+      } catch {
+        setRecentSearches([]);
       }
-    })();
+    }
   }, []);
 
   const saveRecentSearch = async (term: string) => {
@@ -52,7 +43,6 @@ export function SearchBar({
     setRecentSearches(updated);
     try {
       localStorage.setItem("karaoq_recent_searches", JSON.stringify(updated));
-      await puterClient.kvSet("recent_searches", updated);
     } catch {
       // ignore
     }

@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { ServerContext } from "@/server/core/types";
 import { getSupabaseAdminClient } from "@/lib/supabase/server";
-import { verifyPuterToken } from "@/server/core/auth";
+import { verifySupabaseToken } from "@/server/core/auth";
 import { CoreError } from "@/server/core/types";
 import { ZodError } from "zod";
 
@@ -57,9 +57,12 @@ export async function createNextServerContext(req: NextRequest): Promise<ServerC
   const token = authHeader.replace(/^Bearer\s+/i, "").trim() || undefined;
 
   let user;
+  let isAnonymous = false;
   if (token) {
     try {
-      user = await verifyPuterToken(token, supabaseAdmin);
+      const verified = await verifySupabaseToken(token, supabaseAdmin);
+      user = verified.profile;
+      isAnonymous = verified.isAnonymous;
     } catch {
       // Ignore token verification errors for public endpoints
     }
@@ -72,6 +75,7 @@ export async function createNextServerContext(req: NextRequest): Promise<ServerC
     supabase: supabaseAdmin,
     youtubeApiKey: process.env.YOUTUBE_API_KEY,
     user,
+    isAnonymous,
     token,
     clientIp,
   };

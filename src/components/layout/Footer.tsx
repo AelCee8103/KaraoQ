@@ -25,15 +25,7 @@ export function Footer() {
           <Link href="/terms" className="hover:text-primary-soft transition-colors">
             Terms of Service
           </Link>
-          <a
-            href="https://developer.puter.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface-raised border border-border text-foreground hover:border-primary/50 hover:text-primary-soft transition-all"
-          >
-            <span>Powered by</span>
-            <span className="font-bold text-primary-soft">Puter</span>
-          </a>
+          <span className="text-xs text-muted-foreground">Powered by Supabase and YouTube</span>
         </div>
       </div>
     </footer>

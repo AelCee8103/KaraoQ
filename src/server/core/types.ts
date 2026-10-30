@@ -5,8 +5,20 @@ export interface ServerContext {
   supabase: SupabaseClient;
   youtubeApiKey?: string;
   user?: Profile;
+  isAnonymous?: boolean;
   token?: string;
   clientIp?: string;
+}
+
+export function requireRegisteredUser(ctx: ServerContext): Profile {
+  if (!ctx.user || ctx.isAnonymous) {
+    throw new CoreError(
+      "Create an account to use this feature",
+      "ACCOUNT_REQUIRED",
+      401
+    );
+  }
+  return ctx.user;
 }
 
 export class CoreError extends Error {

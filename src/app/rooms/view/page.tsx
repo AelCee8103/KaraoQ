@@ -73,8 +73,8 @@ function GuestViewContent() {
     requestPlaybackState,
   } = useRoomRealtime({
     roomId,
-    userId: user?.uuid || profile?.id,
-    nickname: user?.username || initialNickname,
+    userId: user?.id || profile?.id,
+    nickname: profile?.username || initialNickname,
     isHost: false,
     onQueueChanged: () => fetchQueue(),
     onMembersChanged: () => fetchRoomDetails(),
@@ -93,7 +93,7 @@ function GuestViewContent() {
       setRoom(res.room);
 
       const me = res.members.find(
-        (m) => m.user_id === user?.uuid || m.user_id === profile?.id
+        (m) => m.user_id === user?.id || m.user_id === profile?.id
       );
       if (me) {
         if (me.status === "kicked") {
@@ -264,7 +264,7 @@ function GuestViewContent() {
             </Badge>
           </div>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Joined as <span className="font-semibold text-foreground">{user?.username || initialNickname}</span>
+            Joined as <span className="font-semibold text-foreground">{profile?.username || initialNickname}</span>
           </p>
         </div>
 
@@ -405,9 +405,9 @@ function GuestViewContent() {
           ) : (
             queue.map((item, index) => {
               const isMine =
-                item.added_by === user?.uuid ||
+                item.added_by === user?.id ||
                 item.added_by === profile?.id ||
-                item.added_by_profile?.username === user?.username;
+                item.added_by_profile?.username === profile?.username;
 
               return (
                 <div

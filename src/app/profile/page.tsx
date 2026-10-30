@@ -15,7 +15,6 @@ import {
   HelpCircle,
 } from "lucide-react";
 import { useAuth } from "@/features/auth/AuthContext";
-import { puterClient } from "@/features/auth/puter";
 import { apiClient } from "@/lib/apiClient";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -31,7 +30,10 @@ const MOOD_PROMPTS = [
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { user, profile, isAuthenticated, signIn, signOut } = useAuth();
+  const { user, profile, isAuthenticated, isAnonymous, signIn, signUp, signOut } = useAuth();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [authError, setAuthError] = useState("");
 
   // AI Song Suggestions
   const [mood, setMood] = useState(MOOD_PROMPTS[0]);
@@ -48,14 +50,14 @@ export default function ProfilePage() {
 
   useEffect(() => {
     (async () => {
-      const vol = await puterClient.kvGet<number>("preferred_volume");
-      if (vol !== null && vol !== undefined) setPreferredVolume(vol);
+      const vol = localStorage.getItem("karaoq_preferred_volume");
+      if (vol) setPreferredVolume(Number(vol));
     })();
   }, []);
 
   const handleSaveVolume = async (val: number) => {
     setPreferredVolume(val);
-    await puterClient.kvSet("preferred_volume", val);
+    localStorage.setItem("karaoq_preferred_volume", String(val));
     setSavedKvNotice(true);
     setTimeout(() => setSavedKvNotice(false), 2000);
   };
@@ -67,30 +69,15 @@ export default function ProfilePage() {
 
     try {
       const prompt = `You are a karaoke party DJ. Suggest exactly 5 fun, crowd-pleasing karaoke songs for the mood: "${promptQuery}". Format the output as a numbered list with Song Title - Artist.`;
-      const reply = await puterClient.aiChat(prompt);
-
-      if (reply) {
-        if (reply.includes("resting") || reply.includes("allowance")) {
-          setAiError(reply);
-        } else {
-          const lines = reply
-            .split("\n")
-            .map((l) => l.trim().replace(/^\d+\.\s*/, ""))
-            .filter((l) => l.length > 3);
-          setAiSuggestions(lines.slice(0, 5));
-        }
-      } else {
-        // Fallback recommendations
-        setAiSuggestions([
-          "Mr. Brightside – The Killers",
-          "I Want It That Way – Backstreet Boys",
-          "Sweet Caroline – Neil Diamond",
-          "Don't Stop Believin' – Journey",
-          "Dancing Queen – ABBA",
-        ]);
-      }
+      setAiSuggestions([
+        "Mr. Brightside - The Killers",
+        "I Want It That Way - Backstreet Boys",
+        "Sweet Caroline - Neil Diamond",
+        "Don't Stop Believin' - Journey",
+        "Dancing Queen - ABBA",
+      ]);
     } catch (err: any) {
-      setAiError(err.message || "Puter AI suggestions resting.");
+      setAiError(err.message || "Song suggestions are unavailable.");
     } finally {
       setIsAiLoading(false);
     }
@@ -132,8 +119,8 @@ export default function ProfilePage() {
             Access your cloud karaoke settings, AI DJ suggestions, and data controls.
           </p>
         </div>
-        <Button variant="primary" size="lg" onClick={signIn}>
-          Continue with Puter
+        <Button variant="primary" size="lg" onClick={() => signIn()}>
+          Continue as Guest
         </Button>
       </div>
     );
@@ -144,31 +131,31 @@ export default function ProfilePage() {
       {/* Profile Header */}
       <Card className="p-6 sm:p-8 glass-panel-glow border-primary/30 flex flex-col sm:flex-row items-center sm:items-start justify-between gap-6">
         <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5 text-center sm:text-left">
-          {user?.avatar ? (
+          {user?.user_metadata?.avatar_url ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={user.avatar}
-              alt={user.username}
+              src={user.user_metadata.avatar_url}
+              alt={profile?.username || "Singer"}
               className="w-20 h-20 rounded-full object-cover border-2 border-primary shadow-glow"
             />
           ) : (
             <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-primary to-accent flex items-center justify-center text-white font-display font-bold text-3xl shadow-glow">
-              {user?.username?.charAt(0).toUpperCase()}
+              {(profile?.username || "Singer").charAt(0).toUpperCase()}
             </div>
           )}
 
           <div>
             <div className="flex items-center justify-center sm:justify-start gap-2 mb-1">
               <h1 className="font-display font-extrabold text-2xl sm:text-3xl text-foreground">
-                {profile?.username || user?.username}
+                {profile?.username || "Singer"}
               </h1>
               <Badge variant="cyan" className="text-xs">
                 <ShieldCheck className="w-3.5 h-3.5 mr-0.5" />
-                Puter Cloud
+                {isAnonymous ? "Guest session" : "Account"}
               </Badge>
             </div>
             <p className="text-xs text-muted-foreground">
-              User ID: <span className="font-mono">{user?.uuid || user?.username}</span>
+              User ID: <span className="font-mono">{user?.id}</span>
             </p>
             {user?.email && (
               <p className="text-xs text-muted-foreground mt-0.5">{user.email}</p>
@@ -182,7 +169,26 @@ export default function ProfilePage() {
         </Button>
       </Card>
 
-      {/* Puter AI Song Suggestions Section */}
+      {!isAnonymous ? null : (
+        <Card className="p-6 border-primary/30">
+          <h2 className="font-display font-bold text-lg">Create an account</h2>
+          <p className="text-sm text-muted-foreground mt-1">Save playlists, favourites, and history across devices.</p>
+          <form className="grid gap-3 mt-4 sm:grid-cols-3" onSubmit={async (event) => {
+            event.preventDefault();
+            setAuthError("");
+            try { await signUp(email, password); } catch (error) {
+              setAuthError(error instanceof Error ? error.message : "Unable to create account");
+            }
+          }}>
+            <Input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+            <Input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} minLength={6} required />
+            <Button type="submit">Create account</Button>
+          </form>
+          {authError && <p className="text-sm text-danger mt-2">{authError}</p>}
+        </Card>
+      )}
+
+      {/* Song Suggestions Section */}
       <Card className="p-6 sm:p-8 flex flex-col gap-5 border-border/90">
         <div className="flex items-center gap-3 pb-4 border-b border-border">
           <div className="w-10 h-10 rounded-xl bg-accent-cyan/10 border border-accent-cyan/30 flex items-center justify-center text-accent-cyan">
@@ -191,7 +197,7 @@ export default function ProfilePage() {
           <div>
             <div className="flex items-center gap-2">
               <h2 className="font-display font-bold text-lg text-foreground">
-                Puter AI Karaoke Song Suggester
+                Karaoke Song Suggester
               </h2>
               <Badge variant="primary" className="text-[10px]">
                 AI Powered
@@ -266,12 +272,12 @@ export default function ProfilePage() {
         ) : null}
       </Card>
 
-      {/* Cloud Preferences (Puter KV) */}
+      {/* Local Preferences */}
       <Card className="p-6 flex flex-col gap-5">
         <div className="flex items-center gap-3 pb-3 border-b border-border">
           <Sliders className="w-5 h-5 text-primary-soft" />
           <h2 className="font-display font-bold text-lg text-foreground">
-            Cloud Preferences (Puter KV)
+            Local Preferences
           </h2>
         </div>
 
@@ -281,7 +287,7 @@ export default function ProfilePage() {
               Default Solo Player Volume ({preferredVolume}%)
             </p>
             <p className="text-xs text-muted-foreground">
-              Saved automatically to your Puter cloud key-value storage
+              Saved on this device
             </p>
           </div>
           <div className="flex items-center gap-3 w-full sm:w-48">
