@@ -63,5 +63,4 @@ export interface UserPreferences {
   volume: number;
   recentSearches: string[];
   themeAccent?: string;
-  watchAlongMode?: boolean;
 }

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { PlaybackStatus } from "@/lib/types";
-import { AlertCircle, Volume2, VolumeX, RotateCcw } from "lucide-react";
+import { AlertCircle, RotateCcw } from "lucide-react";
 
 export interface YouTubePlayerProps {
   videoId: string | null;
@@ -11,8 +11,6 @@ export interface YouTubePlayerProps {
   onEnded?: () => void;
   onError?: (errorCode: number) => void;
   onProgress?: (positionSeconds: number, durationSeconds: number) => void;
-  syncTimestamp?: number; // target position in seconds for sync
-  isWatchAlong?: boolean;
   className?: string;
 }
 
@@ -30,16 +28,27 @@ export function YouTubePlayer({
   onEnded,
   onError,
   onProgress,
-  syncTimestamp,
-  isWatchAlong = false,
   className = "",
 }: YouTubePlayerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<any>(null);
+  const loadedVideoIdRef = useRef<string | null>(null);
+  const videoIdRef = useRef(videoId);
+  const autoPlayRef = useRef(autoPlay);
+  const onStateChangeRef = useRef(onStateChange);
+  const onEndedRef = useRef(onEnded);
+  const onErrorRef = useRef(onError);
   const [isApiReady, setIsApiReady] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [isMuted, setIsMuted] = useState(false);
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    videoIdRef.current = videoId;
+    autoPlayRef.current = autoPlay;
+    onStateChangeRef.current = onStateChange;
+    onEndedRef.current = onEnded;
+    onErrorRef.current = onError;
+  }, [videoId, autoPlay, onStateChange, onEnded, onError]);
 
   // Load YouTube IFrame API script
   useEffect(() => {
@@ -60,26 +69,46 @@ export function YouTubePlayer({
     };
   }, []);
 
-  // Initialize or update player
+  // Initialize once, then load subsequent songs through the existing iframe.
   useEffect(() => {
-    if (!isApiReady || !videoId || !containerRef.current) return;
+    if (!isApiReady || !containerRef.current) return;
+
+    if (playerRef.current) {
+      if (!videoIdRef.current) {
+        playerRef.current.stopVideo?.();
+        loadedVideoIdRef.current = null;
+        return;
+      }
+      if (videoIdRef.current && loadedVideoIdRef.current !== videoIdRef.current) {
+        setErrorMessage(null);
+        if (autoPlayRef.current) {
+          playerRef.current.loadVideoById(videoIdRef.current);
+        } else {
+          playerRef.current.cueVideoById(videoIdRef.current);
+        }
+        loadedVideoIdRef.current = videoIdRef.current;
+      }
+      return;
+    }
+
+    if (!videoIdRef.current) return;
 
     setErrorMessage(null);
-
     const playerElementId = `yt-player-${Math.random().toString(36).substring(7)}`;
     const playerDiv = document.createElement("div");
     playerDiv.id = playerElementId;
     containerRef.current.innerHTML = "";
     containerRef.current.appendChild(playerDiv);
+    loadedVideoIdRef.current = videoIdRef.current;
 
     try {
       playerRef.current = new window.YT.Player(playerElementId, {
-        videoId,
+        videoId: videoIdRef.current,
         width: "100%",
         height: "100%",
         playerVars: {
-          autoplay: autoPlay ? 1 : 0,
-          controls: isWatchAlong ? 0 : 1, // Minimal controls for watch along
+          autoplay: autoPlayRef.current ? 1 : 0,
+          controls: 1,
           modestbranding: 1,
           rel: 0,
           playsinline: 1,
@@ -88,7 +117,7 @@ export function YouTubePlayer({
         },
         events: {
           onReady: (event: any) => {
-            if (autoPlay) {
+            if (autoPlayRef.current) {
               event.target.playVideo();
             }
           },
@@ -96,17 +125,16 @@ export function YouTubePlayer({
             const ytState = event.data;
             let status: PlaybackStatus = "unstarted";
 
-            // YouTube Player States: -1=unstarted, 0=ended, 1=playing, 2=paused, 3=buffering, 5=cued
             if (ytState === 1) status = "playing";
             else if (ytState === 2) status = "paused";
             else if (ytState === 3) status = "buffering";
             else if (ytState === 0) {
               status = "ended";
-              onEnded?.();
+              onEndedRef.current?.();
             } else if (ytState === 5) status = "cued";
 
             const currentTime = event.target.getCurrentTime ? event.target.getCurrentTime() : 0;
-            onStateChange?.(status, currentTime);
+            onStateChangeRef.current?.(status, currentTime);
           },
           onError: (event: any) => {
             const errorCode = event.data;
@@ -117,14 +145,18 @@ export function YouTubePlayer({
               msg = "Video was removed or marked private.";
             }
             setErrorMessage(msg);
-            onError?.(errorCode);
+            onErrorRef.current?.(errorCode);
           },
         },
       });
     } catch (err) {
       console.error("Failed to construct YouTube player:", err);
+      playerRef.current = null;
+      loadedVideoIdRef.current = null;
     }
+  }, [isApiReady, videoId]);
 
+  useEffect(() => {
     return () => {
       if (playerRef.current && playerRef.current.destroy) {
         try {
@@ -133,8 +165,10 @@ export function YouTubePlayer({
           // ignore
         }
       }
+      playerRef.current = null;
+      loadedVideoIdRef.current = null;
     };
-  }, [isApiReady, videoId, autoPlay, isWatchAlong]);
+  }, []);
 
   // Track progress and report heartbeat
   useEffect(() => {
@@ -158,38 +192,6 @@ export function YouTubePlayer({
       if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
     };
   }, [onProgress]);
-
-  // Drift Correction for Watch Along Mode (Master Brief Section 3.2: correct if drift exceeds 1.5s)
-  useEffect(() => {
-    if (!isWatchAlong || syncTimestamp === undefined || !playerRef.current) return;
-
-    try {
-      const localTime = playerRef.current.getCurrentTime();
-      if (localTime !== undefined) {
-        const drift = Math.abs(localTime - syncTimestamp);
-        if (drift > 1.5) {
-          playerRef.current.seekTo(syncTimestamp, true);
-        }
-      }
-    } catch {
-      // ignore
-    }
-  }, [syncTimestamp, isWatchAlong]);
-
-  const toggleMute = () => {
-    if (!playerRef.current) return;
-    try {
-      if (isMuted) {
-        playerRef.current.unMute();
-        setIsMuted(false);
-      } else {
-        playerRef.current.mute();
-        setIsMuted(true);
-      }
-    } catch {
-      // ignore
-    }
-  };
 
   const handleRetry = () => {
     setErrorMessage(null);
@@ -226,17 +228,6 @@ export function YouTubePlayer({
 
       <div ref={containerRef} className="w-full h-full" />
 
-      {/* Floating Mute & Fullscreen Overlay for Watch Along */}
-      {isWatchAlong && (
-        <div className="absolute top-3 right-3 flex items-center gap-2 z-10">
-          <button
-            onClick={toggleMute}
-            className="p-2 rounded-full bg-background/80 backdrop-blur-md text-foreground hover:text-primary-soft transition-colors shadow-lg"
-          >
-            {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-          </button>
-        </div>
-      )}
     </div>
   );
 }

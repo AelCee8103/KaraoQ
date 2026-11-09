@@ -7,8 +7,6 @@ import {
   Search,
   Music2,
   Tv,
-  Smartphone,
-  Eye,
   Radio,
   Sparkles,
   Trash2,
@@ -20,7 +18,6 @@ import {
   Smile,
   AlertCircle,
 } from "lucide-react";
-import { YouTubePlayer } from "@/features/player/YouTubePlayer";
 import { SearchBar } from "@/features/youtube/SearchBar";
 import { VideoCard } from "@/features/youtube/VideoCard";
 import { useRoomRealtime } from "@/features/rooms/useRoomRealtime";
@@ -30,7 +27,6 @@ import {
   Room,
   RoomMember,
   QueueItem,
-  PlaybackStatus,
   KaraokeVideo,
   SearchResponse,
 } from "@/lib/types";
@@ -61,9 +57,6 @@ function GuestViewContent() {
   const [currentMember, setCurrentMember] = useState<RoomMember | null>(null);
   const queueFetchVersionRef = React.useRef(0);
 
-  // Guest Mode: Remote (default, no video relay) vs Watch Along (embedded player kept in sync)
-  const [mode, setMode] = useState<"remote" | "watchAlong">("remote");
-
   // Search in guest view
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchResults, setSearchResults] = useState<KaraokeVideo[]>([]);
@@ -72,12 +65,9 @@ function GuestViewContent() {
 
   // Realtime hook
   const {
-    isConnected,
-    playbackState,
     activeReactions,
     singerAnnouncement,
     sendReaction,
-    requestPlaybackState,
   } = useRoomRealtime({
     roomId,
     userId: user?.id || profile?.id,
@@ -86,12 +76,6 @@ function GuestViewContent() {
     onQueueChanged: () => fetchQueue(),
     onMembersChanged: () => fetchRoomDetails(),
   });
-
-  useEffect(() => {
-    if (mode === "watchAlong" && isConnected) {
-      requestPlaybackState();
-    }
-  }, [mode, isConnected, requestPlaybackState]);
 
   const fetchRoomDetails = useCallback(async () => {
     if (!roomId || !user) return;
@@ -272,60 +256,6 @@ function GuestViewContent() {
         </Button>
       </div>
 
-      {/* Mode Switcher: Remote vs Watch Along */}
-      <div className="grid grid-cols-2 p-1 rounded-2xl bg-surface-raised border border-border">
-        <button
-          onClick={() => setMode("remote")}
-          className={`flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-semibold transition-all ${
-            mode === "remote"
-              ? "bg-gradient-to-r from-primary to-accent text-white shadow-glow"
-              : "text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          <Smartphone className="w-4 h-4" />
-          <span>Remote Mode</span>
-        </button>
-
-        <button
-          onClick={() => setMode("watchAlong")}
-          className={`flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-semibold transition-all ${
-            mode === "watchAlong"
-              ? "bg-gradient-to-r from-primary to-accent text-white shadow-glow"
-              : "text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          <Eye className="w-4 h-4" />
-          <span>Watch Along (Sync)</span>
-        </button>
-      </div>
-
-      {/* Watch Along Embedded Synchronized Player */}
-      {mode === "watchAlong" && (
-        <Card className="relative z-0 isolate p-3 overflow-hidden">
-          {playbackState?.videoId ? (
-            <>
-              <YouTubePlayer
-                videoId={playbackState.videoId}
-                autoPlay={playbackState.status === "playing"}
-                syncTimestamp={playbackState.positionSeconds}
-                isWatchAlong={true}
-              />
-              <div className="mt-2 text-center text-xs text-muted-foreground">
-                Synchronized with Host Player (&lt;1.5s drift auto-correction)
-              </div>
-            </>
-          ) : (
-            <div className="aspect-video rounded-2xl bg-surface-raised border border-border flex items-center justify-center p-6 text-center">
-              <p className="text-sm text-muted-foreground">
-                {isConnected
-                  ? "Waiting for the host playback state..."
-                  : "Watch Along is unavailable while realtime is disconnected."}
-              </p>
-            </div>
-          )}
-        </Card>
-      )}
-
       {/* Now Playing Banner */}
       <Card className="p-4 glass-panel-glow border-primary/30 flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
@@ -337,10 +267,10 @@ function GuestViewContent() {
               Now Singing on Stage
             </span>
             <p className="font-semibold text-sm text-foreground truncate">
-              {playbackState?.title || queue[0]?.title || "Party is warming up"}
+              {queue[0]?.title || "Party is warming up"}
             </p>
             <p className="text-xs text-muted-foreground truncate">
-              Singer: {playbackState?.singerNickname || queue[0]?.added_by_profile?.username || "Host"}
+              Singer: {queue[0]?.added_by_profile?.username || "Host"}
             </p>
           </div>
         </div>
