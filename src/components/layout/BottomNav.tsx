@@ -5,9 +5,12 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Search, Music2, Users, Library, User } from "lucide-react";
 import clsx from "clsx";
+import { usePlaybackSession } from "@/features/playback/PlaybackSession";
+import { confirmLeavingSolo } from "@/features/playback/soloNavigation";
 
 export function BottomNav() {
   const pathname = usePathname();
+  const { mode, clearSoloSession } = usePlaybackSession();
 
   const navItems = [
     { label: "Search", href: "/search", icon: Search },
@@ -26,6 +29,14 @@ export function BottomNav() {
           return (
             <Link
               key={item.href}
+              onClick={(event) => {
+                if (item.href !== "/rooms") return;
+                if (!confirmLeavingSolo(mode)) {
+                  event.preventDefault();
+                } else if (mode === "solo") {
+                  clearSoloSession();
+                }
+              }}
               href={item.href}
               className={clsx(
                 "flex flex-col items-center justify-center min-w-[56px] min-h-[48px] px-2 py-1 rounded-xl transition-all duration-150",

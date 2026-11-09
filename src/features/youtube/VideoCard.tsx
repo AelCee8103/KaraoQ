@@ -33,6 +33,7 @@ export function VideoCard({
 }: VideoCardProps) {
   const { isAuthenticated, signIn } = useAuth();
   const { mode, addSoloToQueue, setSoloCurrent } = usePlaybackSession();
+  const isRoomContext = mode === "room" || !!onAddToRoomQueue;
   const [favourited, setFavourited] = useState(initialFavourited);
   const [isFavLoading, setIsFavLoading] = useState(false);
   const [addedNotice, setAddedNotice] = useState(false);
@@ -125,7 +126,7 @@ export function VideoCard({
               >
                 {addedNotice ? <Check className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
               </button>
-            ) : onPlaySolo ? (
+            ) : !isRoomContext && onPlaySolo ? (
               <button
                 onClick={() => onPlaySolo(video)}
                 className="w-11 h-11 rounded-full bg-primary flex items-center justify-center text-white shadow-glow hover:scale-110 transition-transform"
@@ -133,7 +134,7 @@ export function VideoCard({
               >
                 <Play className="w-5 h-5 fill-white ml-0.5" />
               </button>
-            ) : (
+            ) : !isRoomContext ? (
               <Link
                 href={`/watch?v=${video.id}`}
                 className="w-11 h-11 rounded-full bg-primary flex items-center justify-center text-white shadow-glow hover:scale-110 transition-transform"
@@ -141,7 +142,7 @@ export function VideoCard({
               >
                 <Play className="w-5 h-5 fill-white ml-0.5" />
               </Link>
-            )}
+            ) : null}
 
             {onAddToRoomQueue && mode !== "solo" && (
               <button

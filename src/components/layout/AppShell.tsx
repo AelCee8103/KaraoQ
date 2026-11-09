@@ -6,11 +6,13 @@ import { BottomNav } from "./BottomNav";
 import { Footer } from "./Footer";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { usePlaybackSession } from "@/features/playback/PlaybackSession";
+import { usePlaybackSession, useReconcileRoomSession } from "@/features/playback/PlaybackSession";
+import { SoloPlayback } from "@/features/player/SoloPlayback";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { mode, room, roomIsHost } = usePlaybackSession();
+  useReconcileRoomSession();
   const isRoomRoute = pathname.startsWith("/rooms/host") || pathname.startsWith("/rooms/view");
   return (
     <div className="relative min-h-screen flex flex-col bg-background text-foreground selection:bg-primary selection:text-white">
@@ -33,6 +35,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* Main Content Area */}
       <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-24 md:pb-12 relative z-10">
+        <SoloPlayback />
         {mode === "room" && room && !isRoomRoute ? (
           <div className="min-h-[55vh] flex flex-col items-center justify-center text-center gap-5">
             <div className="w-16 h-16 rounded-3xl bg-accent-cyan/10 border border-accent-cyan/40 flex items-center justify-center text-accent-cyan">

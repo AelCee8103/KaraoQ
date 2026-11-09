@@ -8,11 +8,12 @@ export interface MiniPlayerProps {
   isOpen: boolean;
   onClose: () => void;
   onExpand: () => void;
+  isHidden?: boolean;
   title?: string;
   children: React.ReactNode;
 }
 
-export function MiniPlayer({ isOpen, onClose, onExpand, title, children }: MiniPlayerProps) {
+export function MiniPlayer({ isOpen, isHidden = false, onClose, onExpand, title, children }: MiniPlayerProps) {
   return (
     <motion.div
       {...(isOpen
@@ -26,7 +27,9 @@ export function MiniPlayer({ isOpen, onClose, onExpand, title, children }: MiniP
           }
         : {})}
       className={
-        isOpen
+        isHidden
+          ? "hidden"
+          : isOpen
           ? "fixed bottom-20 right-6 z-50 w-72 sm:w-80 glass-panel-glow rounded-2xl overflow-hidden shadow-2xl border border-primary/40 cursor-grab active:cursor-grabbing"
           : "relative w-full aspect-video"
       }

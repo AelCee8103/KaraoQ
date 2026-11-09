@@ -48,7 +48,11 @@ import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import { Modal } from "@/components/ui/Modal";
 import { FALLBACK_KARAOKE_SONGS } from "@/server/core/youtube";
-import { usePlaybackSession } from "@/features/playback/PlaybackSession";
+import {
+  isRoomSessionActive,
+  isRoomSessionInvalidationError,
+  usePlaybackSession,
+} from "@/features/playback/PlaybackSession";
 
 function HostConsoleContent() {
   const searchParams = useSearchParams();
@@ -101,32 +105,29 @@ function HostConsoleContent() {
   });
 
   const fetchRoomDetails = useCallback(async () => {
-    if (!roomId) return;
+    if (!roomId || !user) return;
     try {
       const res = await apiClient.get<{ room: Room; members: RoomMember[] }>(`/rooms/${roomId}`);
+      const userIds = [user.id, profile?.id].filter((id): id is string => Boolean(id));
+      if (
+        !res?.room ||
+        !Array.isArray(res.members) ||
+        !isRoomSessionActive(res.room, res.members, userIds)
+      ) {
+        endRoom();
+        router.replace("/rooms");
+        return;
+      }
       setRoom(res.room);
       startRoom(res.room, true);
       setMembers(res.members);
-    } catch {
-      // Mock room for offline dev
-      setRoom((previousRoom) => {
-        if (previousRoom) return previousRoom;
-        return {
-          id: roomId,
-          host_id: user?.id || "host-id",
-          name: initialName,
-          room_key: "KARAQ7",
-          status: "open",
-          max_guests: 12,
-          settings: { maxSongsPerGuest: 3, allowGuestReorder: true, blockExplicit: false },
-          current_item_id: null,
-          last_activity_at: new Date().toISOString(),
-          expires_at: new Date(Date.now() + 1000 * 60 * 60 * 12).toISOString(),
-          created_at: new Date().toISOString(),
-        };
-      });
+    } catch (error) {
+      if (isRoomSessionInvalidationError(error)) {
+        endRoom();
+        router.replace("/rooms");
+      }
     }
-  }, [roomId, initialName, user, startRoom]);
+  }, [roomId, user, profile, startRoom, endRoom, router]);
 
   const fetchQueue = useCallback(async () => {
     if (!roomId) return;

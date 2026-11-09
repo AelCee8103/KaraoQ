@@ -10,10 +10,13 @@ import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { apiClient } from "@/lib/apiClient";
 import { Room, RoomMember } from "@/lib/types";
+import { usePlaybackSession } from "@/features/playback/PlaybackSession";
+import { confirmLeavingSolo } from "@/features/playback/soloNavigation";
 
 export default function CreateRoomPage() {
   const router = useRouter();
   const { isAuthenticated, signIn, user } = useAuth();
+  const { mode, clearSoloSession } = usePlaybackSession();
 
   const [name, setName] = useState("");
   const [maxGuests, setMaxGuests] = useState(12);
@@ -34,6 +37,8 @@ export default function CreateRoomPage() {
       await signIn();
       return;
     }
+    if (!confirmLeavingSolo(mode)) return;
+    if (mode === "solo") clearSoloSession();
 
     setIsLoading(true);
     setError("");

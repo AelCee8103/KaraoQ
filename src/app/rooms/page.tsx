@@ -8,12 +8,15 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { useAuth } from "@/features/auth/AuthContext";
+import { usePlaybackSession } from "@/features/playback/PlaybackSession";
+import { confirmLeavingSolo } from "@/features/playback/soloNavigation";
 
 function RoomsDashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const addVideoParam = searchParams.get("addVideo");
   const { isAuthenticated, signIn, user } = useAuth();
+  const { mode, clearSoloSession } = usePlaybackSession();
 
   const [roomKey, setRoomKey] = useState("");
   const [error, setError] = useState("");
@@ -62,7 +65,13 @@ function RoomsDashboardContent() {
             </div>
           </div>
 
-          <Link href="/rooms/new">
+          <Link
+            href="/rooms/new"
+            onClick={(event) => {
+              if (!confirmLeavingSolo(mode)) event.preventDefault();
+              else if (mode === "solo") clearSoloSession();
+            }}
+          >
             <Button variant="primary" size="lg" className="w-full flex items-center gap-2">
               <Plus className="w-5 h-5" />
               <span>Create New Room</span>

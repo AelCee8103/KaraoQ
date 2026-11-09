@@ -2,12 +2,12 @@
 
 import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { YouTubePlayer } from "@/features/player/YouTubePlayer";
 import { VideoCard } from "@/features/youtube/VideoCard";
 import { KaraokeVideo, PlaybackStatus } from "@/lib/types";
 import { FALLBACK_KARAOKE_SONGS } from "@/server/core/youtube";
 import { SearchBar } from "@/features/youtube/SearchBar";
 import { usePlaybackSession } from "@/features/playback/PlaybackSession";
+import { confirmLeavingSolo } from "@/features/playback/soloNavigation";
 import { apiClient } from "@/lib/apiClient";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -28,20 +28,18 @@ import {
 function WatchContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { mode, soloQueue, soloCurrent, setSoloCurrent, addSoloToQueue, removeSoloFromQueue, clearSoloQueue } =
+  const { mode, soloQueue, soloCurrent, setSoloCurrent, addSoloToQueue, removeSoloFromQueue, clearSoloQueue, clearSoloSession } =
     usePlaybackSession();
-  const videoIdParam = searchParams.get("v") || FALLBACK_KARAOKE_SONGS[0].id;
+  const videoIdParam = searchParams.get("v");
 
-  const [currentVideoId, setCurrentVideoId] = useState(videoIdParam);
+  const [currentVideoId, setCurrentVideoId] = useState<string | null>(videoIdParam);
   const [currentSong, setCurrentSong] = useState<KaraokeVideo | null>(null);
   const [personalQueue, setPersonalQueue] = useState<KaraokeVideo[]>([]);
   const [isKaraokeMode, setIsKaraokeMode] = useState(false);
   const [isFavourited, setIsFavourited] = useState(false);
 
   useEffect(() => {
-    if (soloCurrent && soloCurrent.id === videoIdParam) {
-      setCurrentSong(soloCurrent);
-    }
+    setCurrentSong(soloCurrent && soloCurrent.id === videoIdParam ? soloCurrent : null);
   }, [soloCurrent, videoIdParam]);
 
   useEffect(() => {
@@ -49,11 +47,13 @@ function WatchContent() {
   }, [soloQueue]);
 
   useEffect(() => {
-    if (videoIdParam && mode !== "room") {
+    if (!videoIdParam && mode === "solo") {
+      clearSoloSession();
+    } else if (videoIdParam && mode !== "room") {
       const selected = FALLBACK_KARAOKE_SONGS.find((song) => song.id === videoIdParam);
       if (selected) setSoloCurrent(selected);
     }
-  }, [videoIdParam, mode, setSoloCurrent]);
+  }, [videoIdParam, mode, setSoloCurrent, clearSoloSession]);
 
   /* Do not auto-fill the solo queue with recommendations. */
   useEffect(() => {
@@ -62,15 +62,19 @@ function WatchContent() {
       const found = FALLBACK_KARAOKE_SONGS.find((s) => s.id === videoIdParam);
       if (found) {
         setCurrentSong(found);
+        setSoloCurrent(found);
       } else {
         // Fetch details from backend
         apiClient
           .get<KaraokeVideo[]>("/youtube/videos", { ids: videoIdParam })
           .then((res) => {
-            if (res && res.length > 0) setCurrentSong(res[0]);
+            if (res && res.length > 0) {
+              setCurrentSong(res[0]);
+              setSoloCurrent(res[0]);
+            }
           })
           .catch(() => {
-            setCurrentSong({
+            const fallback = {
               id: videoIdParam,
               title: "Karaoke Performance",
               channelTitle: "Karaoke Channel",
@@ -80,11 +84,13 @@ function WatchContent() {
               formattedDuration: "4:00",
               isVerifiedKaraoke: true,
               isEmbeddable: true,
-            });
+            };
+            setCurrentSong(fallback);
+            setSoloCurrent(fallback);
           });
       }
     }
-  }, [videoIdParam]);
+  }, [videoIdParam, setSoloCurrent]);
 
   const handleNextSong = () => {
     if (personalQueue.length > 0) {
@@ -126,13 +132,13 @@ function WatchContent() {
             placeholder="Search songs while playing..."
           />
           <div className="relative group">
-            <YouTubePlayer
-              videoId={currentVideoId}
-              autoPlay={true}
-              onEnded={handleNextSong}
-              className={isKaraokeMode ? "max-h-[75vh]" : ""}
-            />
-
+            {!soloCurrent && (
+              <div className="aspect-video rounded-2xl bg-surface-raised border border-border flex items-center justify-center p-6 text-center">
+                <p className="text-sm text-muted-foreground">
+                  Your solo player is empty. Choose a song from Search or Library to start.
+                </p>
+              </div>
+            )}
             {/* Karaoke Mode Control */}
             <div className="absolute top-4 right-4 z-10 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
               <button
@@ -290,7 +296,12 @@ function WatchContent() {
             <Button
               variant="neon"
               size="sm"
-              onClick={() => router.push("/rooms/new")}
+              onClick={() => {
+                if (confirmLeavingSolo(mode)) {
+                  clearSoloSession();
+                  router.push("/rooms/new");
+                }
+              }}
               className="w-full text-xs"
             >
               Start Karaoke Room

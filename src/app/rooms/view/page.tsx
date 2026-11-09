@@ -39,7 +39,11 @@ import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import { Modal } from "@/components/ui/Modal";
 import { FALLBACK_KARAOKE_SONGS } from "@/server/core/youtube";
-import { usePlaybackSession } from "@/features/playback/PlaybackSession";
+import {
+  isRoomSessionActive,
+  isRoomSessionInvalidationError,
+  usePlaybackSession,
+} from "@/features/playback/PlaybackSession";
 
 const REACTION_EMOJIS = ["🔥", "🎤", "👏", "💖", "🎉", "⭐", "🚀", "💃"];
 
@@ -50,7 +54,7 @@ function GuestViewContent() {
   const initialNickname = searchParams.get("nick") || "Singer";
 
   const { user, profile } = useAuth();
-  const { startRoom } = usePlaybackSession();
+  const { startRoom, endRoom } = usePlaybackSession();
 
   const [room, setRoom] = useState<Room | null>(null);
   const [queue, setQueue] = useState<QueueItem[]>([]);
@@ -90,9 +94,19 @@ function GuestViewContent() {
   }, [mode, isConnected, requestPlaybackState]);
 
   const fetchRoomDetails = useCallback(async () => {
-    if (!roomId) return;
+    if (!roomId || !user) return;
     try {
       const res = await apiClient.get<{ room: Room; members: RoomMember[] }>(`/rooms/${roomId}`);
+      const userIds = [user?.id, profile?.id].filter((id): id is string => Boolean(id));
+      if (
+        !res?.room ||
+        !Array.isArray(res.members) ||
+        !isRoomSessionActive(res.room, res.members, userIds)
+      ) {
+        endRoom();
+        router.replace("/rooms");
+        return;
+      }
       setRoom(res.room);
       startRoom(res.room, false);
 
@@ -105,26 +119,13 @@ function GuestViewContent() {
         }
         setCurrentMember(me);
       }
-    } catch {
-      // Mock room for preview
-      setRoom((previousRoom) => {
-        if (previousRoom) return previousRoom;
-        return {
-          id: roomId,
-          host_id: "host-id",
-          name: "Friday Karaoke Room",
-          room_key: "KARAQ7",
-          status: "open",
-          max_guests: 12,
-          settings: { maxSongsPerGuest: 3, allowGuestReorder: true, blockExplicit: false },
-          current_item_id: null,
-          last_activity_at: new Date().toISOString(),
-          expires_at: new Date(Date.now() + 1000 * 60 * 60 * 12).toISOString(),
-          created_at: new Date().toISOString(),
-        };
-      });
+    } catch (error) {
+      if (isRoomSessionInvalidationError(error)) {
+        endRoom();
+        router.replace("/rooms");
+      }
     }
-  }, [roomId, user, profile, startRoom]);
+  }, [roomId, user, profile, startRoom, endRoom, router]);
 
   const fetchQueue = useCallback(async () => {
     if (!roomId) return;
@@ -196,6 +197,7 @@ function GuestViewContent() {
     } catch {
       // ignore
     }
+    endRoom();
     router.push("/rooms");
   };
 

@@ -5,10 +5,20 @@ import Link from "next/link";
 import { Mic, Search, Music2, Library, Users, LogIn, LogOut, User } from "lucide-react";
 import { useAuth } from "@/features/auth/AuthContext";
 import { Button } from "@/components/ui/Button";
+import { usePlaybackSession } from "@/features/playback/PlaybackSession";
+import { confirmLeavingSolo } from "@/features/playback/soloNavigation";
 
 export function Navbar() {
   const { user, profile, isAuthenticated, isAnonymous, isLoading, signIn, signOut } = useAuth();
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const { mode, clearSoloSession } = usePlaybackSession();
+  const handleRoomsClick = (event: React.MouseEvent<HTMLAnchorElement>) => {
+    if (!confirmLeavingSolo(mode)) {
+      event.preventDefault();
+      return;
+    }
+    if (mode === "solo") clearSoloSession();
+  };
 
   return (
     <header className="sticky top-0 z-40 w-full glass-panel border-b border-border/80">
@@ -41,6 +51,7 @@ export function Navbar() {
           </Link>
           <Link
             href="/rooms"
+            onClick={handleRoomsClick}
             className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-surface-raised transition-colors"
           >
             <Users className="w-4 h-4 text-accent-cyan" />
