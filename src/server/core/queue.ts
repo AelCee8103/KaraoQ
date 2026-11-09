@@ -33,23 +33,20 @@ export async function addQueueItem(
   if (!ctx.user) throw new CoreError("Unauthorized", "UNAUTHORIZED", 401);
 
   // 1. Verify room and member
-  const { data: roomData, error: roomError } = await ctx.supabase
-    .from("rooms")
-    .select("*")
-    .eq("id", roomId)
-    .single();
+  const [{ data: roomData, error: roomError }, { data: member }] = await Promise.all([
+    ctx.supabase.from("rooms").select("*").eq("id", roomId).single(),
+    ctx.supabase
+      .from("room_members")
+      .select("*")
+      .eq("room_id", roomId)
+      .eq("user_id", ctx.user.id)
+      .single(),
+  ]);
 
   if (roomError || !roomData) throw new CoreError("Room not found", "ROOM_NOT_FOUND", 404);
   const room = roomData as Room;
 
   if (room.status === "ended") throw new CoreError("Room session ended", "ROOM_ENDED", 400);
-
-  const { data: member } = await ctx.supabase
-    .from("room_members")
-    .select("*")
-    .eq("room_id", roomId)
-    .eq("user_id", ctx.user.id)
-    .single();
 
   if (!member || member.status !== "active") {
     throw new CoreError("You must be an active member of this room to queue songs", "FORBIDDEN", 403);
@@ -59,15 +56,34 @@ export async function addQueueItem(
   const isHost = room.host_id === ctx.user.id;
   const maxSongs = room.settings?.maxSongsPerGuest ?? 3;
 
-  if (!isHost) {
-    const { count: userQueuedCount } = await ctx.supabase
+  const [countResult, duplicateResult, lastItemResult] = await Promise.all([
+    isHost
+      ? Promise.resolve({ count: null })
+      : ctx.supabase
+          .from("queue_items")
+          .select("*", { count: "exact", head: true })
+          .eq("room_id", roomId)
+          .eq("added_by", ctx.user.id)
+          .eq("status", "queued"),
+    ctx.supabase
       .from("queue_items")
-      .select("*", { count: "exact", head: true })
+      .select("id")
       .eq("room_id", roomId)
-      .eq("added_by", ctx.user.id)
-      .eq("status", "queued");
+      .eq("video_id", input.videoId)
+      .in("status", ["queued", "playing"])
+      .maybeSingle(),
+    ctx.supabase
+      .from("queue_items")
+      .select("position")
+      .eq("room_id", roomId)
+      .in("status", ["queued", "playing"])
+      .order("position", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ]);
 
-    if (userQueuedCount && userQueuedCount >= maxSongs) {
+  if (!isHost) {
+    if (countResult.count && countResult.count >= maxSongs) {
       throw new CoreError(
         `Queue limit reached! You can have at most ${maxSongs} songs queued at once.`,
         "QUEUE_LIMIT_REACHED",
@@ -77,27 +93,11 @@ export async function addQueueItem(
   }
 
   // 3. Check for duplicates currently in queue
-  const { data: existingDuplicate } = await ctx.supabase
-    .from("queue_items")
-    .select("id")
-    .eq("room_id", roomId)
-    .eq("video_id", input.videoId)
-    .in("status", ["queued", "playing"])
-    .maybeSingle();
+  const isDuplicate = !!duplicateResult.data;
 
-  const isDuplicate = !!existingDuplicate;
-
-  // 4. Calculate position (Fractional indexing: max + 1000)
-  const { data: lastItem } = await ctx.supabase
-    .from("queue_items")
-    .select("position")
-    .eq("room_id", roomId)
-    .in("status", ["queued", "playing"])
-    .order("position", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  const nextPosition = lastItem?.position ? Number(lastItem.position) + 1000 : 1000;
+  const nextPosition = lastItemResult.data?.position
+    ? Number(lastItemResult.data.position) + 1000
+    : 1000;
 
   // 5. Insert queue item
   const { data: inserted, error: insertError } = await ctx.supabase
@@ -121,7 +121,7 @@ export async function addQueueItem(
   }
 
   // Update room last activity
-  await ctx.supabase
+  void ctx.supabase
     .from("rooms")
     .update({ last_activity_at: new Date().toISOString() })
     .eq("id", roomId);
@@ -145,10 +145,12 @@ export async function updateQueueItem(
   if (!ctx.user) throw new CoreError("Unauthorized", "UNAUTHORIZED", 401);
 
   // Get room and item
-  const { data: room } = await ctx.supabase.from("rooms").select("*").eq("id", roomId).single();
+  const [{ data: room }, { data: item }] = await Promise.all([
+    ctx.supabase.from("rooms").select("*").eq("id", roomId).single(),
+    ctx.supabase.from("queue_items").select("*").eq("id", itemId).single(),
+  ]);
   if (!room) throw new CoreError("Room not found", "ROOM_NOT_FOUND", 404);
 
-  const { data: item } = await ctx.supabase.from("queue_items").select("*").eq("id", itemId).single();
   if (!item) throw new CoreError("Queue item not found", "ITEM_NOT_FOUND", 404);
 
   const isHost = room.host_id === ctx.user.id;

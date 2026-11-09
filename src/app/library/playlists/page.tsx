@@ -21,13 +21,15 @@ import { Card } from "@/components/ui/Card";
 import { Modal } from "@/components/ui/Modal";
 import { SearchBar } from "@/features/youtube/SearchBar";
 import { FALLBACK_KARAOKE_SONGS } from "@/server/core/youtube";
+import { usePlaybackSession } from "@/features/playback/PlaybackSession";
 
 function PlaylistDetailContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const playlistId = searchParams.get("id") || "";
 
-  const { isAuthenticated, signIn, user } = useAuth();
+  const { isAuthenticated, isAnonymous, signIn } = useAuth();
+  const { addSoloToQueue } = usePlaybackSession();
   const [playlist, setPlaylist] = useState<Playlist | null>(null);
   const [items, setItems] = useState<PlaylistItem[]>([]);
   const [isAddSongOpen, setIsAddSongOpen] = useState(false);
@@ -35,7 +37,7 @@ function PlaylistDetailContent() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (!playlistId || !isAuthenticated) {
+    if (!playlistId || !isAuthenticated || isAnonymous) {
       setIsLoading(false);
       return;
     }
@@ -49,34 +51,13 @@ function PlaylistDetailContent() {
           setPlaylist(found);
           setItems(found.items || []);
         }
-      } catch {
-        // Mock fallback
-        setPlaylist({
-          id: playlistId,
-          owner_id: user?.id || "user-id",
-          name: "My Karaoke Mix",
-          description: "Top party hits",
-          is_public: false,
-          created_at: new Date().toISOString(),
-        });
-        setItems(
-          FALLBACK_KARAOKE_SONGS.slice(0, 3).map((s, idx) => ({
-            id: `item-${idx}`,
-            playlist_id: playlistId,
-            video_id: s.id,
-            title: s.title,
-            channel_title: s.channelTitle,
-            thumbnail_url: s.thumbnailUrl,
-            duration_seconds: s.durationSeconds,
-            position: idx + 1,
-            created_at: new Date().toISOString(),
-          }))
-        );
+      } catch (error) {
+        console.error("Failed to load playlist:", error);
       } finally {
         setIsLoading(false);
       }
     })();
-  }, [playlistId, isAuthenticated, user]);
+  }, [playlistId, isAuthenticated, isAnonymous]);
 
   const handleSearchSongs = async (q: string) => {
     try {
@@ -101,20 +82,8 @@ function PlaylistDetailContent() {
       );
       setItems((prev) => [...prev, added]);
       setIsAddSongOpen(false);
-    } catch {
-      const mock: PlaylistItem = {
-        id: "item-" + Math.random().toString(36).substring(7),
-        playlist_id: playlistId,
-        video_id: video.id,
-        title: video.title,
-        channel_title: video.channelTitle,
-        thumbnail_url: video.thumbnailUrl,
-        duration_seconds: video.durationSeconds,
-        position: items.length + 1,
-        created_at: new Date().toISOString(),
-      };
-      setItems((prev) => [...prev, mock]);
-      setIsAddSongOpen(false);
+    } catch (error) {
+      console.error("Failed to add song to playlist:", error);
     }
   };
 
@@ -131,6 +100,41 @@ function PlaylistDetailContent() {
   const handleRemoveItem = (itemId: string) => {
     setItems((prev) => prev.filter((i) => i.id !== itemId));
   };
+
+  const queuePlaylistItem = (item: PlaylistItem) => {
+    addSoloToQueue({
+      id: item.video_id,
+      title: item.title,
+      channelTitle: item.channel_title || "",
+      channelId: "",
+      thumbnailUrl: item.thumbnail_url || `https://i.ytimg.com/vi/${item.video_id}/mqdefault.jpg`,
+      durationSeconds: item.duration_seconds,
+      formattedDuration: `${Math.floor(item.duration_seconds / 60)}:${String(item.duration_seconds % 60).padStart(2, "0")}`,
+      isVerifiedKaraoke: false,
+      isEmbeddable: true,
+    });
+  };
+
+  if (!isAuthenticated || isAnonymous) {
+    return (
+      <div className="max-w-md mx-auto py-16 text-center flex flex-col items-center gap-5">
+        <div className="w-16 h-16 rounded-3xl bg-surface-raised border border-border flex items-center justify-center text-primary-soft shadow-glow">
+          <ListMusic className="w-8 h-8" />
+        </div>
+        <div>
+          <h1 className="font-display font-extrabold text-2xl text-foreground">
+            Account Required
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Create an account to view and manage saved playlists.
+          </p>
+        </div>
+        <Button variant="primary" size="lg" onClick={() => signIn()}>
+          Create an Account
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto py-4 flex flex-col gap-6">
@@ -177,6 +181,14 @@ function PlaylistDetailContent() {
             <Plus className="w-4 h-4" />
             <span>Add Songs</span>
           </Button>
+          <Button
+            variant="outline"
+            size="md"
+            onClick={() => items.forEach(queuePlaylistItem)}
+            disabled={items.length === 0}
+          >
+            Add All to Queue
+          </Button>
         </div>
       </div>
 
@@ -217,6 +229,9 @@ function PlaylistDetailContent() {
               </div>
 
               <div className="flex items-center gap-1.5 ml-2">
+                <Button variant="outline" size="sm" onClick={() => queuePlaylistItem(item)}>
+                  Queue
+                </Button>
                 <Link href={`/watch?v=${item.video_id}`}>
                   <button
                     className="p-1.5 text-primary-soft hover:text-white rounded-lg hover:bg-primary/20 transition-colors"

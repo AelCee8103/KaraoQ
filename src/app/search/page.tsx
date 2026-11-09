@@ -10,10 +10,12 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { AlertTriangle, Sparkles, Music2, Loader2, ArrowRight } from "lucide-react";
 import { FALLBACK_KARAOKE_SONGS } from "@/server/core/youtube";
+import { usePlaybackSession } from "@/features/playback/PlaybackSession";
 
 function SearchContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { mode, setSoloCurrent, addSoloToQueue } = usePlaybackSession();
   const initialQuery = searchParams.get("q") || "";
 
   const [query, setQuery] = useState(initialQuery);
@@ -84,6 +86,15 @@ function SearchContent() {
     }
   };
 
+  const handleVideoAction = (video: KaraokeVideo) => {
+    if (mode === "solo") {
+      addSoloToQueue(video);
+      return;
+    }
+    setSoloCurrent(video);
+    router.push(`/watch?v=${video.id}`);
+  };
+
   return (
     <div className="flex flex-col gap-8 max-w-7xl mx-auto py-4">
       {/* Search Header */}
@@ -141,7 +152,8 @@ function SearchContent() {
               <VideoCard
                 key={video.id}
                 video={video}
-                onAddToRoomQueue={() => router.push(`/rooms?addVideo=${video.id}`)}
+                onPlaySolo={mode === "idle" ? handleVideoAction : undefined}
+                onAddToRoomQueue={mode === "room" ? handleVideoAction : undefined}
               />
             ))}
           </div>

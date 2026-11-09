@@ -16,6 +16,7 @@ import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { apiClient } from "@/lib/apiClient";
 import { useAuth } from "@/features/auth/AuthContext";
+import { usePlaybackSession } from "@/features/playback/PlaybackSession";
 
 export interface VideoCardProps {
   video: KaraokeVideo;
@@ -31,6 +32,7 @@ export function VideoCard({
   isFavourited: initialFavourited = false,
 }: VideoCardProps) {
   const { isAuthenticated, signIn } = useAuth();
+  const { mode, addSoloToQueue, setSoloCurrent } = usePlaybackSession();
   const [favourited, setFavourited] = useState(initialFavourited);
   const [isFavLoading, setIsFavLoading] = useState(false);
   const [addedNotice, setAddedNotice] = useState(false);
@@ -71,6 +73,22 @@ export function VideoCard({
     }
   };
 
+  const handlePrimaryAction = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (mode === "solo") {
+      addSoloToQueue(video);
+      setAddedNotice(true);
+      setTimeout(() => setAddedNotice(false), 2000);
+    } else if (onAddToRoomQueue) {
+      onAddToRoomQueue(video);
+      setAddedNotice(true);
+      setTimeout(() => setAddedNotice(false), 2000);
+    } else {
+      setSoloCurrent(video);
+    }
+  };
+
   return (
     <Card className="overflow-hidden group flex flex-col justify-between p-3.5 hover:border-primary/50 transition-all duration-200">
       <div>
@@ -99,7 +117,15 @@ export function VideoCard({
 
           {/* Quick Play Overlay */}
           <div className="absolute inset-0 bg-background/50 opacity-0 group-hover:opacity-100 flex items-center justify-center gap-3 transition-opacity">
-            {onPlaySolo ? (
+            {mode === "solo" ? (
+              <button
+                onClick={handlePrimaryAction}
+                className="w-10 h-10 rounded-full bg-accent-cyan text-background flex items-center justify-center shadow-glow-cyan hover:scale-110 transition-transform"
+                title="Add to Queue"
+              >
+                {addedNotice ? <Check className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
+              </button>
+            ) : onPlaySolo ? (
               <button
                 onClick={() => onPlaySolo(video)}
                 className="w-11 h-11 rounded-full bg-primary flex items-center justify-center text-white shadow-glow hover:scale-110 transition-transform"
@@ -117,7 +143,7 @@ export function VideoCard({
               </Link>
             )}
 
-            {onAddToRoomQueue && (
+            {onAddToRoomQueue && mode !== "solo" && (
               <button
                 onClick={handleAddClick}
                 className="w-10 h-10 rounded-full bg-accent-cyan text-background flex items-center justify-center shadow-glow-cyan hover:scale-110 transition-transform font-bold"
@@ -140,13 +166,24 @@ export function VideoCard({
 
       {/* Action Bar */}
       <div className="mt-3 pt-2.5 border-t border-border flex items-center justify-between">
-        <Link
-          href={`/watch?v=${video.id}`}
-          className="text-xs font-semibold text-primary-soft hover:underline flex items-center gap-1"
-        >
-          <Play className="w-3 h-3 fill-current" />
-          <span>Sing Solo</span>
-        </Link>
+        {mode === "solo" || mode === "room" || onAddToRoomQueue ? (
+          <button
+            onClick={handlePrimaryAction}
+            className="text-xs font-semibold text-primary-soft hover:underline flex items-center gap-1"
+          >
+            {mode === "solo" ? <Plus className="w-3 h-3" /> : <Radio className="w-3 h-3" />}
+            <span>{mode === "solo" ? "Add to Queue" : "Add to Room Queue"}</span>
+          </button>
+        ) : (
+          <Link
+            href={`/watch?v=${video.id}`}
+            onClick={() => setSoloCurrent(video)}
+            className="text-xs font-semibold text-primary-soft hover:underline flex items-center gap-1"
+          >
+            <Play className="w-3 h-3 fill-current" />
+            <span>Play Solo</span>
+          </Link>
+        )}
 
         <div className="flex items-center gap-1">
           {onAddToRoomQueue && (

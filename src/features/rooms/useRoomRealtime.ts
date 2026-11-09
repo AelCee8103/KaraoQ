@@ -37,10 +37,17 @@ export function useRoomRealtime({
 
   const channelRef = useRef<RealtimeChannel | null>(null);
   const playbackStateRef = useRef<PlaybackState | null>(null);
+  const onQueueChangedRef = useRef(onQueueChanged);
+  const onMembersChangedRef = useRef(onMembersChanged);
 
   useEffect(() => {
     playbackStateRef.current = playbackState;
   }, [playbackState]);
+
+  useEffect(() => {
+    onQueueChangedRef.current = onQueueChanged;
+    onMembersChangedRef.current = onMembersChanged;
+  }, [onQueueChanged, onMembersChanged]);
 
   useEffect(() => {
     if (!roomId) return;
@@ -113,14 +120,14 @@ export function useRoomRealtime({
         "postgres_changes",
         { event: "*", schema: "public", table: "queue_items", filter: `room_id=eq.${roomId}` },
         () => {
-          onQueueChanged?.();
+          onQueueChangedRef.current?.();
         }
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "room_members", filter: `room_id=eq.${roomId}` },
         () => {
-          onMembersChanged?.();
+          onMembersChangedRef.current?.();
         }
       );
 
@@ -150,7 +157,7 @@ export function useRoomRealtime({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [roomId, userId, nickname, isHost, onQueueChanged, onMembersChanged]);
+  }, [roomId, userId, nickname, isHost]);
 
   // Host sends playback snapshot
   const broadcastPlayback = useCallback(

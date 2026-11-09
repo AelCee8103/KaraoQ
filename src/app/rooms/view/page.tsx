@@ -39,6 +39,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import { Modal } from "@/components/ui/Modal";
 import { FALLBACK_KARAOKE_SONGS } from "@/server/core/youtube";
+import { usePlaybackSession } from "@/features/playback/PlaybackSession";
 
 const REACTION_EMOJIS = ["🔥", "🎤", "👏", "💖", "🎉", "⭐", "🚀", "💃"];
 
@@ -49,10 +50,12 @@ function GuestViewContent() {
   const initialNickname = searchParams.get("nick") || "Singer";
 
   const { user, profile } = useAuth();
+  const { startRoom } = usePlaybackSession();
 
   const [room, setRoom] = useState<Room | null>(null);
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const [currentMember, setCurrentMember] = useState<RoomMember | null>(null);
+  const queueFetchVersionRef = React.useRef(0);
 
   // Guest Mode: Remote (default, no video relay) vs Watch Along (embedded player kept in sync)
   const [mode, setMode] = useState<"remote" | "watchAlong">("remote");
@@ -91,6 +94,7 @@ function GuestViewContent() {
     try {
       const res = await apiClient.get<{ room: Room; members: RoomMember[] }>(`/rooms/${roomId}`);
       setRoom(res.room);
+      startRoom(res.room, false);
 
       const me = res.members.find(
         (m) => m.user_id === user?.id || m.user_id === profile?.id
@@ -103,8 +107,9 @@ function GuestViewContent() {
       }
     } catch {
       // Mock room for preview
-      if (!room) {
-        setRoom({
+      setRoom((previousRoom) => {
+        if (previousRoom) return previousRoom;
+        return {
           id: roomId,
           host_id: "host-id",
           name: "Friday Karaoke Room",
@@ -116,36 +121,22 @@ function GuestViewContent() {
           last_activity_at: new Date().toISOString(),
           expires_at: new Date(Date.now() + 1000 * 60 * 60 * 12).toISOString(),
           created_at: new Date().toISOString(),
-        });
-      }
+        };
+      });
     }
-  }, [roomId, user, profile, room]);
+  }, [roomId, user, profile, startRoom]);
 
   const fetchQueue = useCallback(async () => {
     if (!roomId) return;
+    const requestVersion = ++queueFetchVersionRef.current;
     try {
       const res = await apiClient.get<QueueItem[]>(`/rooms/${roomId}/queue`);
+      if (requestVersion !== queueFetchVersionRef.current) return;
       setQueue(res);
     } catch {
-      if (queue.length === 0) {
-        setQueue([
-          {
-            id: "q-1",
-            room_id: roomId,
-            added_by: "host",
-            video_id: FALLBACK_KARAOKE_SONGS[0].id,
-            title: FALLBACK_KARAOKE_SONGS[0].title,
-            channel_title: FALLBACK_KARAOKE_SONGS[0].channelTitle,
-            thumbnail_url: FALLBACK_KARAOKE_SONGS[0].thumbnailUrl,
-            duration_seconds: FALLBACK_KARAOKE_SONGS[0].durationSeconds,
-            position: 1000,
-            status: "playing",
-            created_at: new Date().toISOString(),
-          },
-        ]);
-      }
+      console.error("Failed to load room queue");
     }
-  }, [roomId, queue.length]);
+  }, [roomId]);
 
   useEffect(() => {
     fetchRoomDetails();

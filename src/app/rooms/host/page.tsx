@@ -48,6 +48,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import { Modal } from "@/components/ui/Modal";
 import { FALLBACK_KARAOKE_SONGS } from "@/server/core/youtube";
+import { usePlaybackSession } from "@/features/playback/PlaybackSession";
 
 function HostConsoleContent() {
   const searchParams = useSearchParams();
@@ -56,6 +57,7 @@ function HostConsoleContent() {
   const initialName = searchParams.get("name") || "KaraoQ Room";
 
   const { user, profile } = useAuth();
+  const { startRoom, endRoom } = usePlaybackSession();
 
   const [room, setRoom] = useState<Room | null>(null);
   const [members, setMembers] = useState<RoomMember[]>([]);
@@ -63,6 +65,12 @@ function HostConsoleContent() {
   const [currentItem, setCurrentItem] = useState<QueueItem | null>(null);
   const [playerStatus, setPlayerStatus] = useState<PlaybackStatus>("unstarted");
   const [currentPosition, setCurrentPosition] = useState(0);
+  const currentItemRef = useRef<QueueItem | null>(null);
+  const queueFetchVersionRef = useRef(0);
+
+  useEffect(() => {
+    currentItemRef.current = currentItem;
+  }, [currentItem]);
 
   // Mini Player & Host Search state
   const [isSearchingInMini, setIsSearchingInMini] = useState(false);
@@ -97,11 +105,13 @@ function HostConsoleContent() {
     try {
       const res = await apiClient.get<{ room: Room; members: RoomMember[] }>(`/rooms/${roomId}`);
       setRoom(res.room);
+      startRoom(res.room, true);
       setMembers(res.members);
     } catch {
       // Mock room for offline dev
-      if (!room) {
-        setRoom({
+      setRoom((previousRoom) => {
+        if (previousRoom) return previousRoom;
+        return {
           id: roomId,
           host_id: user?.id || "host-id",
           name: initialName,
@@ -113,48 +123,42 @@ function HostConsoleContent() {
           last_activity_at: new Date().toISOString(),
           expires_at: new Date(Date.now() + 1000 * 60 * 60 * 12).toISOString(),
           created_at: new Date().toISOString(),
-        });
-      }
+        };
+      });
     }
-  }, [roomId, initialName, user, room]);
+  }, [roomId, initialName, user, startRoom]);
 
   const fetchQueue = useCallback(async () => {
     if (!roomId) return;
+    const requestVersion = ++queueFetchVersionRef.current;
     try {
       const res = await apiClient.get<QueueItem[]>(`/rooms/${roomId}/queue`);
+      if (requestVersion !== queueFetchVersionRef.current) return;
       setQueue(res);
 
-      if (!currentItem && res.length > 0) {
-        const first = res[0];
-        setCurrentItem(first);
-        sendSingerAnnouncement(
-          first.added_by_profile?.username || "Guest",
-          first.title,
-          first.id
-        );
+      const previousCurrent = currentItemRef.current;
+      const nextCurrent = previousCurrent
+        ? res.find((item) => item.id === previousCurrent.id) ||
+          res.find((item) => item.status === "playing") ||
+          res[0] ||
+          null
+        : res.find((item) => item.status === "playing") || res[0] || null;
+
+      if (nextCurrent?.id !== previousCurrent?.id) {
+        currentItemRef.current = nextCurrent;
+        setCurrentItem(nextCurrent);
+        if (nextCurrent) {
+          sendSingerAnnouncement(
+            nextCurrent.added_by_profile?.username || "Guest",
+            nextCurrent.title,
+            nextCurrent.id
+          );
+        }
       }
     } catch {
-      // Mock queue if empty
-      if (queue.length === 0) {
-        const mockItem: QueueItem = {
-          id: "queue-1",
-          room_id: roomId,
-          added_by: user?.id || "host-id",
-          video_id: FALLBACK_KARAOKE_SONGS[0].id,
-          title: FALLBACK_KARAOKE_SONGS[0].title,
-          channel_title: FALLBACK_KARAOKE_SONGS[0].channelTitle,
-          thumbnail_url: FALLBACK_KARAOKE_SONGS[0].thumbnailUrl,
-          duration_seconds: FALLBACK_KARAOKE_SONGS[0].durationSeconds,
-          position: 1000,
-          status: "playing",
-          created_at: new Date().toISOString(),
-          added_by_profile: profile || undefined,
-        };
-        setQueue([mockItem]);
-        setCurrentItem(mockItem);
-      }
+      console.error("Failed to load room queue");
     }
-  }, [roomId, currentItem, user, profile, queue.length, sendSingerAnnouncement]);
+  }, [roomId, sendSingerAnnouncement]);
 
   useEffect(() => {
     fetchRoomDetails();
@@ -204,20 +208,19 @@ function HostConsoleContent() {
   const handleSongEnded = async () => {
     if (!currentItem) return;
 
-    try {
-      await apiClient.patch(`/rooms/${roomId}/queue/${currentItem.id}`, {
+    void apiClient.patch(`/rooms/${roomId}/queue/${currentItem.id}`, {
         status: "played",
         action: "skip",
+      }).catch(() => {
+        // offline dev
       });
-    } catch {
-      // offline dev
-    }
 
     const remaining = queue.filter((i) => i.id !== currentItem.id);
     setQueue(remaining);
 
     if (remaining.length > 0) {
       const next = remaining[0];
+      currentItemRef.current = next;
       setCurrentItem(next);
       sendSingerAnnouncement(
         next.added_by_profile?.username || "Guest",
@@ -225,6 +228,7 @@ function HostConsoleContent() {
         next.id
       );
     } else {
+      currentItemRef.current = null;
       setCurrentItem(null);
     }
   };
@@ -292,6 +296,7 @@ function HostConsoleContent() {
     } catch {
       // ignore
     }
+    endRoom();
     router.push("/rooms");
   };
 
@@ -351,27 +356,12 @@ function HostConsoleContent() {
         }
       );
       setQueue((prev) => [...prev, res.item]);
-      if (!currentItem) {
+      if (!currentItemRef.current) {
+        currentItemRef.current = res.item;
         setCurrentItem(res.item);
       }
     } catch {
-      // Local fallback
-      const mockItem: QueueItem = {
-        id: "queue-" + Math.random().toString(36).substring(7),
-        room_id: roomId,
-        added_by: user?.id || "host-id",
-        video_id: video.id,
-        title: video.title,
-        channel_title: video.channelTitle,
-        thumbnail_url: video.thumbnailUrl,
-        duration_seconds: video.durationSeconds,
-        position: (queue.length + 1) * 1000,
-        status: "queued",
-        created_at: new Date().toISOString(),
-        added_by_profile: profile || undefined,
-      };
-      setQueue((prev) => [...prev, mockItem]);
-      if (!currentItem) setCurrentItem(mockItem);
+      console.error("Failed to add song to room queue");
     }
   };
 
@@ -537,7 +527,7 @@ function HostConsoleContent() {
               <SearchBar initialQuery={searchQuery} onSearch={handleHostSearch} autoFocus />
 
               <div className="grid grid-cols-1 sm:grid-cols-2 auto-rows-max items-start gap-3 max-h-[70vh] overflow-y-auto pr-1">
-                {searchResults.map((video) => (
+                {(searchResults.length > 0 ? searchResults : FALLBACK_KARAOKE_SONGS.slice(0, 6)).map((video) => (
                   <VideoCard
                     key={video.id}
                     video={video}

@@ -24,7 +24,7 @@ import { Input } from "@/components/ui/Input";
 
 export default function LibraryPage() {
   const router = useRouter();
-  const { isAuthenticated, isAnonymous, signIn, user } = useAuth();
+  const { isAuthenticated, isAnonymous, signIn } = useAuth();
 
   const [activeTab, setActiveTab] = useState<"favourites" | "playlists" | "history">("favourites");
   const [favourites, setFavourites] = useState<Favourite[]>([]);
@@ -73,19 +73,8 @@ export default function LibraryPage() {
       setPlaylists((prev) => [created, ...prev]);
       setIsNewPlaylistOpen(false);
       setPlaylistName("");
-    } catch {
-      // preview fallback
-      const mock: Playlist = {
-        id: "pl-" + Math.random().toString(36).substring(7),
-        owner_id: user?.id || "user-id",
-        name: playlistName.trim(),
-        description: null,
-        is_public: false,
-        created_at: new Date().toISOString(),
-      };
-      setPlaylists((prev) => [mock, ...prev]);
-      setIsNewPlaylistOpen(false);
-      setPlaylistName("");
+    } catch (error) {
+      console.error("Failed to create playlist:", error);
     } finally {
       setIsCreatingPl(false);
     }
@@ -100,7 +89,7 @@ export default function LibraryPage() {
     }
   };
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated || isAnonymous) {
     return (
       <div className="max-w-md mx-auto py-16 text-center flex flex-col items-center gap-5">
         <div className="w-16 h-16 rounded-3xl bg-surface-raised border border-border flex items-center justify-center text-primary-soft shadow-glow">
@@ -115,7 +104,7 @@ export default function LibraryPage() {
           </p>
         </div>
         <Button variant="primary" size="lg" onClick={() => signIn()}>
-          Continue as Guest
+          Create an Account
         </Button>
       </div>
     );

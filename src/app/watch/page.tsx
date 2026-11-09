@@ -6,6 +6,8 @@ import { YouTubePlayer } from "@/features/player/YouTubePlayer";
 import { VideoCard } from "@/features/youtube/VideoCard";
 import { KaraokeVideo, PlaybackStatus } from "@/lib/types";
 import { FALLBACK_KARAOKE_SONGS } from "@/server/core/youtube";
+import { SearchBar } from "@/features/youtube/SearchBar";
+import { usePlaybackSession } from "@/features/playback/PlaybackSession";
 import { apiClient } from "@/lib/apiClient";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -26,6 +28,8 @@ import {
 function WatchContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { mode, soloQueue, soloCurrent, setSoloCurrent, addSoloToQueue, removeSoloFromQueue, clearSoloQueue } =
+    usePlaybackSession();
   const videoIdParam = searchParams.get("v") || FALLBACK_KARAOKE_SONGS[0].id;
 
   const [currentVideoId, setCurrentVideoId] = useState(videoIdParam);
@@ -34,6 +38,24 @@ function WatchContent() {
   const [isKaraokeMode, setIsKaraokeMode] = useState(false);
   const [isFavourited, setIsFavourited] = useState(false);
 
+  useEffect(() => {
+    if (soloCurrent && soloCurrent.id === videoIdParam) {
+      setCurrentSong(soloCurrent);
+    }
+  }, [soloCurrent, videoIdParam]);
+
+  useEffect(() => {
+    setPersonalQueue(soloQueue);
+  }, [soloQueue]);
+
+  useEffect(() => {
+    if (videoIdParam && mode !== "room") {
+      const selected = FALLBACK_KARAOKE_SONGS.find((song) => song.id === videoIdParam);
+      if (selected) setSoloCurrent(selected);
+    }
+  }, [videoIdParam, mode, setSoloCurrent]);
+
+  /* Do not auto-fill the solo queue with recommendations. */
   useEffect(() => {
     if (videoIdParam) {
       setCurrentVideoId(videoIdParam);
@@ -64,22 +86,17 @@ function WatchContent() {
     }
   }, [videoIdParam]);
 
-  // Load up next suggestions
-  useEffect(() => {
-    const suggestions = FALLBACK_KARAOKE_SONGS.filter((s) => s.id !== currentVideoId);
-    setPersonalQueue(suggestions);
-  }, [currentVideoId]);
-
   const handleNextSong = () => {
     if (personalQueue.length > 0) {
       const next = personalQueue[0];
       setPersonalQueue((prev) => prev.slice(1));
+      removeSoloFromQueue(next.id);
       router.push(`/watch?v=${next.id}`);
     }
   };
 
   const handleAddToPersonalQueue = (video: KaraokeVideo) => {
-    setPersonalQueue((prev) => [...prev, video]);
+    addSoloToQueue(video);
   };
 
   const toggleFavourite = async () => {
@@ -104,6 +121,10 @@ function WatchContent() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         {/* Main Video View */}
         <div className="lg:col-span-2 flex flex-col gap-4">
+          <SearchBar
+            onSearch={(query) => query.trim() && router.push(`/search?q=${encodeURIComponent(query.trim())}`)}
+            placeholder="Search songs while playing..."
+          />
           <div className="relative group">
             <YouTubePlayer
               videoId={currentVideoId}
@@ -228,6 +249,32 @@ function WatchContent() {
                   </div>
                 ))
               )}
+            </div>
+            <button
+              onClick={clearSoloQueue}
+              disabled={personalQueue.length === 0}
+              className="mt-3 text-xs text-muted-foreground hover:text-danger disabled:opacity-40"
+            >
+              Clear queue
+            </button>
+          </Card>
+
+          <Card className="p-5">
+            <div className="flex items-center justify-between pb-3 border-b border-border mb-3">
+              <h3 className="font-display font-bold text-base text-foreground">Recommended</h3>
+              <span className="text-xs text-muted-foreground">Add manually</span>
+            </div>
+            <div className="flex flex-col gap-2">
+              {FALLBACK_KARAOKE_SONGS.filter((song) => song.id !== currentVideoId).slice(0, 5).map((song) => (
+                <button
+                  key={song.id}
+                  onClick={() => handleAddToPersonalQueue(song)}
+                  className="text-left text-xs p-2 rounded-lg hover:bg-surface-raised text-foreground"
+                >
+                  <span className="font-semibold">{song.title}</span>
+                  <span className="block text-muted-foreground">{song.channelTitle}</span>
+                </button>
+              ))}
             </div>
           </Card>
 
