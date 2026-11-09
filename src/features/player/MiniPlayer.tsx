@@ -9,13 +9,24 @@ export interface MiniPlayerProps {
   onClose: () => void;
   onExpand: () => void;
   isHidden?: boolean;
+  id?: string;
   title?: string;
   children: React.ReactNode;
 }
 
-export function MiniPlayer({ isOpen, isHidden = false, onClose, onExpand, title, children }: MiniPlayerProps) {
+export function MiniPlayer({
+  isOpen,
+  isHidden = false,
+  onClose,
+  onExpand,
+  title,
+  id,
+  children,
+}: MiniPlayerProps) {
   return (
     <motion.div
+      id={id}
+      tabIndex={id ? -1 : undefined}
       {...(isOpen
         ? {
             drag: true,

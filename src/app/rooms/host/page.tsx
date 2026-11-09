@@ -492,13 +492,15 @@ function HostConsoleContent() {
             onExpand={() => setIsSearchingInMini(false)}
             title={currentItem?.title}
           >
-            <YouTubePlayer
-              videoId={currentItem?.video_id || null}
-              autoPlay={true}
-              onStateChange={handlePlayerStateChange}
-              onEnded={handleSongEnded}
-              onProgress={(pos) => setCurrentPosition(pos)}
-            />
+            <div className="relative z-0 isolate">
+              <YouTubePlayer
+                videoId={currentItem?.video_id || null}
+                autoPlay={true}
+                onStateChange={handlePlayerStateChange}
+                onEnded={handleSongEnded}
+                onProgress={(pos) => setCurrentPosition(pos)}
+              />
+            </div>
           </MiniPlayer>
 
           {/* Host Search while playing trigger */}

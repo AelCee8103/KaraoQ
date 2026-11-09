@@ -301,7 +301,7 @@ function GuestViewContent() {
 
       {/* Watch Along Embedded Synchronized Player */}
       {mode === "watchAlong" && (
-        <Card className="p-3 overflow-hidden">
+        <Card className="relative z-0 isolate p-3 overflow-hidden">
           {playbackState?.videoId ? (
             <>
               <YouTubePlayer

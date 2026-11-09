@@ -13,10 +13,7 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import {
-  Maximize,
-  Minimize,
   Heart,
-  Plus,
   Play,
   SkipForward,
   Music2,
@@ -28,69 +25,74 @@ import {
 function WatchContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { mode, soloQueue, soloCurrent, setSoloCurrent, addSoloToQueue, removeSoloFromQueue, clearSoloQueue, clearSoloSession } =
-    usePlaybackSession();
+  const {
+    mode,
+    soloQueue,
+    soloCurrent,
+    setSoloCurrent,
+    addSoloToQueue,
+    removeSoloFromQueue,
+    clearSoloQueue,
+    clearSoloSession,
+  } = usePlaybackSession();
   const videoIdParam = searchParams.get("v");
 
   const [currentVideoId, setCurrentVideoId] = useState<string | null>(videoIdParam);
   const [currentSong, setCurrentSong] = useState<KaraokeVideo | null>(null);
   const [personalQueue, setPersonalQueue] = useState<KaraokeVideo[]>([]);
-  const [isKaraokeMode, setIsKaraokeMode] = useState(false);
   const [isFavourited, setIsFavourited] = useState(false);
 
   useEffect(() => {
-    setCurrentSong(soloCurrent && soloCurrent.id === videoIdParam ? soloCurrent : null);
+    setCurrentSong(
+      videoIdParam
+        ? soloCurrent?.id === videoIdParam
+          ? soloCurrent
+          : null
+        : soloCurrent
+    );
   }, [soloCurrent, videoIdParam]);
 
   useEffect(() => {
     setPersonalQueue(soloQueue);
   }, [soloQueue]);
 
-  useEffect(() => {
-    if (!videoIdParam && mode === "solo") {
-      clearSoloSession();
-    } else if (videoIdParam && mode !== "room") {
-      const selected = FALLBACK_KARAOKE_SONGS.find((song) => song.id === videoIdParam);
-      if (selected) setSoloCurrent(selected);
-    }
-  }, [videoIdParam, mode, setSoloCurrent, clearSoloSession]);
-
   /* Do not auto-fill the solo queue with recommendations. */
   useEffect(() => {
-    if (videoIdParam) {
-      setCurrentVideoId(videoIdParam);
-      const found = FALLBACK_KARAOKE_SONGS.find((s) => s.id === videoIdParam);
-      if (found) {
-        setCurrentSong(found);
-        setSoloCurrent(found);
-      } else {
-        // Fetch details from backend
-        apiClient
-          .get<KaraokeVideo[]>("/youtube/videos", { ids: videoIdParam })
-          .then((res) => {
-            if (res && res.length > 0) {
-              setCurrentSong(res[0]);
-              setSoloCurrent(res[0]);
-            }
-          })
-          .catch(() => {
-            const fallback = {
-              id: videoIdParam,
-              title: "Karaoke Performance",
-              channelTitle: "Karaoke Channel",
-              channelId: "",
-              thumbnailUrl: `https://i.ytimg.com/vi/${videoIdParam}/mqdefault.jpg`,
-              durationSeconds: 240,
-              formattedDuration: "4:00",
-              isVerifiedKaraoke: true,
-              isEmbeddable: true,
-            };
-            setCurrentSong(fallback);
-            setSoloCurrent(fallback);
-          });
-      }
+    setCurrentVideoId(videoIdParam);
+    if (!videoIdParam || mode === "room") return;
+
+    const found = FALLBACK_KARAOKE_SONGS.find((s) => s.id === videoIdParam);
+    if (found) {
+      setCurrentSong(found);
+      setSoloCurrent(found);
+      return;
     }
-  }, [videoIdParam, setSoloCurrent]);
+
+    // Fetch details from backend
+    apiClient
+      .get<KaraokeVideo[]>("/youtube/videos", { ids: videoIdParam })
+      .then((res) => {
+        if (res && res.length > 0) {
+          setCurrentSong(res[0]);
+          setSoloCurrent(res[0]);
+        }
+      })
+      .catch(() => {
+        const fallback = {
+          id: videoIdParam,
+          title: "Karaoke Performance",
+          channelTitle: "Karaoke Channel",
+          channelId: "",
+          thumbnailUrl: `https://i.ytimg.com/vi/${videoIdParam}/mqdefault.jpg`,
+          durationSeconds: 240,
+          formattedDuration: "4:00",
+          isVerifiedKaraoke: true,
+          isEmbeddable: true,
+        };
+        setCurrentSong(fallback);
+        setSoloCurrent(fallback);
+      });
+  }, [videoIdParam, mode, setSoloCurrent]);
 
   const handleNextSong = () => {
     if (personalQueue.length > 0) {
@@ -122,7 +124,7 @@ function WatchContent() {
   };
 
   return (
-    <div className={`flex flex-col gap-6 max-w-7xl mx-auto ${isKaraokeMode ? "fixed inset-0 z-50 bg-background p-6 overflow-y-auto" : "py-2"}`}>
+    <div className="flex flex-col gap-6 max-w-7xl mx-auto py-2">
       {/* Player Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         {/* Main Video View */}
@@ -139,25 +141,6 @@ function WatchContent() {
                 </p>
               </div>
             )}
-            {/* Karaoke Mode Control */}
-            <div className="absolute top-4 right-4 z-10 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-              <button
-                onClick={() => setIsKaraokeMode(!isKaraokeMode)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-background/80 backdrop-blur-md text-foreground hover:text-primary-soft text-xs font-semibold shadow-lg border border-border"
-              >
-                {isKaraokeMode ? (
-                  <>
-                    <Minimize className="w-3.5 h-3.5" />
-                    <span>Exit Full View</span>
-                  </>
-                ) : (
-                  <>
-                    <Maximize className="w-3.5 h-3.5" />
-                    <span>Karaoke Big Stage</span>
-                  </>
-                )}
-              </button>
-            </div>
           </div>
 
           {/* Now Playing Info & Actions */}
@@ -202,6 +185,15 @@ function WatchContent() {
               >
                 <SkipForward className="w-4 h-4" />
                 <span>Next Track</span>
+              </Button>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={clearSoloSession}
+                className="flex-1 sm:flex-initial"
+              >
+                End Solo Session
               </Button>
             </div>
           </Card>

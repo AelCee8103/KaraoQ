@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { MiniPlayer } from "./MiniPlayer";
 import { YouTubePlayer } from "./YouTubePlayer";
@@ -9,10 +9,28 @@ import { usePlaybackSession } from "@/features/playback/PlaybackSession";
 export function SoloPlayback() {
   const pathname = usePathname();
   const router = useRouter();
-  const { mode, soloCurrent, soloQueue, setSoloCurrent, removeSoloFromQueue, clearSoloSession } =
-    usePlaybackSession();
+  const {
+    mode,
+    soloCurrent,
+    soloQueue,
+    setSoloCurrent,
+    removeSoloFromQueue,
+    clearSoloSession,
+  } = usePlaybackSession();
   const [isVisible, setIsVisible] = useState(true);
   const isWatchRoute = pathname === "/watch";
+
+  useEffect(() => {
+    if (!isWatchRoute || !soloCurrent) return;
+
+    const player = document.getElementById("solo-player");
+    if (!player) return;
+
+    requestAnimationFrame(() => {
+      player.scrollIntoView({ block: "start", behavior: "auto" });
+      (player as HTMLElement).focus({ preventScroll: true });
+    });
+  }, [isWatchRoute, soloCurrent]);
 
   const advance = useCallback(() => {
     const next = soloQueue[0];
@@ -28,6 +46,7 @@ export function SoloPlayback() {
 
   return (
     <MiniPlayer
+      id="solo-player"
       isOpen={!isWatchRoute && isVisible}
       isHidden={!isWatchRoute && !isVisible}
       title={soloCurrent.title}

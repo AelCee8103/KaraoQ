@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { PlaybackStatus } from "@/lib/types";
-import { AlertCircle, Volume2, VolumeX, Maximize2, RotateCcw } from "lucide-react";
+import { AlertCircle, Volume2, VolumeX, RotateCcw } from "lucide-react";
 
 export interface YouTubePlayerProps {
   videoId: string | null;
@@ -209,7 +209,7 @@ export function YouTubePlayer({
   }
 
   return (
-    <div className={`relative w-full aspect-video rounded-2xl overflow-hidden bg-black border border-border shadow-2xl ${className}`}>
+    <div className={`relative isolate w-full aspect-video rounded-2xl overflow-hidden bg-black border border-border shadow-2xl ${className}`}>
       {errorMessage ? (
         <div className="absolute inset-0 bg-background/95 flex flex-col items-center justify-center p-6 text-center gap-3 z-20">
           <AlertCircle className="w-10 h-10 text-danger" />

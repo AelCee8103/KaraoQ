@@ -57,12 +57,18 @@ export const usePlaybackSession = create<PlaybackSessionState>()(
       roomIsHost: false,
       setSoloCurrent: (video) => set({ mode: "solo", soloCurrent: video }),
       addSoloToQueue: (video) =>
-        set((state) => ({
-          mode: "solo",
-          soloQueue: state.soloQueue.some((item) => item.id === video.id)
-            ? state.soloQueue
-            : [...state.soloQueue, video],
-        })),
+        set((state) => {
+          if (!state.soloCurrent) {
+            return { mode: "solo", soloCurrent: video };
+          }
+
+          return {
+            mode: "solo",
+            soloQueue: state.soloQueue.some((item) => item.id === video.id)
+              ? state.soloQueue
+              : [...state.soloQueue, video],
+          };
+        }),
       removeSoloFromQueue: (videoId) =>
         set((state) => ({ soloQueue: state.soloQueue.filter((item) => item.id !== videoId) })),
       clearSoloQueue: () => set({ soloQueue: [] }),
